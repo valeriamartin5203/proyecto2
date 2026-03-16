@@ -1,8 +1,8 @@
 import {useState} from "react"
-import Login from "./login"
-import Registro from "./registro"
-import Reporte from "./reporte"
-import ListaReportes from "./listareportes"
+import Login from "./components/login"
+import Registro from "./components/registro"
+import Reporte from "./components/reporteform"
+import ListaReportes from "./components/listareportes"
 
 function App(){
 
