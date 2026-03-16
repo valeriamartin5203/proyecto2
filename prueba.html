@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Reportes con IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #4CAF50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .file-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .resultado {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .exito {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .preview-container {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .preview-container img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📸 Sistema de Reportes con IA</h1>
+            <p>Prueba la integración con Gemini AI</p>
+        </div>
+        
+        <div class="form-container">
+            <!-- Estado del servidor -->
+            <div style="margin-bottom: 20px; text-align: center;">
+                <span id="serverStatus" class="status-badge status-offline">
+                    🔴 Verificando servidor...
+                </span>
+            </div>
+            
+            <form id="reporteForm">
+                <div class="form-group">
+                    <label>👤 Usuario:</label>
+                    <input type="text" id="usuario" value="test1" placeholder="Nombre de usuario" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>📍 Módulo / Ubicación:</label>
+                    <input type="text" id="modulo" value="Aula 101" placeholder="Ej: Edificio A, Oficina 5" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>🖼️ Selecciona una imagen:</label>
+                    <input type="file" id="imagen" accept="image/*" required>
+                    <div class="file-info">Formatos: PNG, JPG, JPEG, GIF, WEBP (Máx: 5MB)</div>
+                </div>
+                
+                <!-- Vista previa de la imagen -->
+                <div id="previewContainer" class="preview-container">
+                    <img id="imagePreview" src="#" alt="Vista previa">
+                </div>
+                
+                <button type="submit" id="submitBtn">
+                    <span id="btnText">Enviar Reporte</span>
+                    <span id="loadingSpinner" class="loading" style="display: none;"></span>
+                </button>
+            </form>
+
+            <div id="resultado" class="resultado"></div>
+            
+            <!-- Últimos reportes -->
+            <div style="margin-top: 30px;">
+                <h3 style="margin-bottom: 15px; color: #333;">📋 Últimos reportes</h3>
+                <div id="ultimosReportes" style="max-height: 200px; overflow-y: auto;">
+                    <p style="text-align: center; color: #666;">Cargando reportes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración
+        const API_URL = 'http://localhost:3000';
+        
+        // Elementos del DOM
+        const form = document.getElementById('reporteForm');
+        const usuarioInput = document.getElementById('usuario');
+        const moduloInput = document.getElementById('modulo');
+        const imagenInput = document.getElementById('imagen');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const resultadoDiv = document.getElementById('resultado');
+        const serverStatus = document.getElementById('serverStatus');
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const ultimosReportes = document.getElementById('ultimosReportes');
+
+        // Verificar conexión con el servidor
+        async function verificarServidor() {
+            try {
+                const response = await fetch(`${API_URL}/`);
+                if (response.ok) {
+                    serverStatus.className = 'status-badge status-online';
+                    serverStatus.innerHTML = '🟢 Servidor conectado';
+                    cargarReportes();
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error conectando al servidor:', error);
+            }
+            serverStatus.className = 'status-badge status-offline';
+            serverStatus.innerHTML = '🔴 Servidor desconectado';
+            return false;
+        }
+
+        // Vista previa de la imagen
+        imagenInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                previewContainer.style.display = 'none';
+            }
+        });
+
+        // Enviar formulario
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Deshabilitar botón
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            loadingSpinner.style.display = 'inline-block';
+            resultadoDiv.style.display = 'none';
+            
+            // Obtener valores
+            const usuario = usuarioInput.value.trim();
+            const modulo = moduloInput.value.trim();
+            const imagenFile = imagenInput.files[0];
+            
+            // Validaciones
+            if (!usuario) {
+                mostrarResultado('❌ El usuario es obligatorio', 'error');
+                habilitarBoton();
+                return;
+            }
+            
+            if (!modulo) {
+                mostrarResultado('❌ El módulo es obligatorio', 'error');
+                habilitarBoton();
+                return;
+            }
+            
+            if (!imagenFile) {
+                mostrarResultado('❌ Debes seleccionar una imagen', 'error');
+                habilitarBoton();
+                return;
+            }
+            
+            // Validar tamaño (5MB máximo)
+            if (imagenFile.size > 5 * 1024 * 1024) {
+                mostrarResultado('❌ La imagen no debe superar los 5MB', 'error');
+                habilitarBoton();
+                return;
+            }
+            
+            // Validar tipo de archivo
+            const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!tiposPermitidos.includes(imagenFile.type)) {
+                mostrarResultado('❌ Solo se permiten imágenes (JPG, PNG, GIF, WEBP)', 'error');
+                habilitarBoton();
+                return;
+            }
+            
+            try {
+                mostrarResultado('⏳ Enviando reporte...', 'info');
+                
+                // Crear FormData
+                const formData = new FormData();
+                formData.append('usuario', usuario);
+                formData.append('modulo', modulo);
+                formData.append('imagen', imagenFile);
+                
+                // Enviar petición
+                const response = await fetch(`${API_URL}/reportes`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                console.log('Respuesta:', data);
+                
+                if (data.success) {
+                    mostrarResultado(`
+                        <strong>✅ ¡Reporte creado exitosamente!</strong><br>
+                        <strong>🆔 ID:</strong> ${data.reporte.id}<br>
+                        <strong>📝 Problema:</strong> ${data.reporte.problema}<br>
+                        <strong>🏷️ Categoría:</strong> ${data.reporte.categoria}<br>
+                        <strong>⚠️ Urgencia:</strong> ${data.reporte.urgencia}<br>
+                        <strong>📍 Módulo:</strong> ${data.reporte.modulo}<br>
+                        <strong>👤 Usuario:</strong> ${data.reporte.usuario}
+                    `, 'exito');
+                    
+                    // Limpiar formulario
+                    form.reset();
+                    previewContainer.style.display = 'none';
+                    
+                    // Recargar lista de reportes
+                    cargarReportes();
+                } else {
+                    mostrarResultado(`❌ Error: ${data.mensaje}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarResultado(`❌ Error de conexión: ${error.message}`, 'error');
+            }
+            
+            habilitarBoton();
+        });
+
+        function habilitarBoton() {
+            submitBtn.disabled = false;
+            btnText.style.display = 'inline';
+            loadingSpinner.style.display = 'none';
+        }
+
+        function mostrarResultado(mensaje, tipo) {
+            resultadoDiv.innerHTML = mensaje;
+            resultadoDiv.className = `resultado ${tipo}`;
+            resultadoDiv.style.display = 'block';
+        }
+
+        // Cargar últimos reportes
+        async function cargarReportes() {
+            try {
+                const response = await fetch(`${API_URL}/reportes`);
+                const data = await response.json();
+                
+                if (data.reportes && data.reportes.length > 0) {
+                    const reportesHtml = data.reportes.slice(0, 5).map(reporte => `
+                        <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                            <strong>#${reporte.id}</strong> - ${reporte.problema}<br>
+                            <small>${reporte.categoria} | ${reporte.urgencia}</small>
+                        </div>
+                    `).join('');
+                    
+                    ultimosReportes.innerHTML = reportesHtml;
+                } else {
+                    ultimosReportes.innerHTML = '<p style="text-align: center; color: #666;">No hay reportes aún</p>';
+                }
+            } catch (error) {
+                ultimosReportes.innerHTML = '<p style="text-align: center; color: #666;">Error cargando reportes</p>';
+            }
+        }
+
+        // Verificar servidor al cargar la página
+        verificarServidor();
+        
+        // Verificar cada 30 segundos
+        setInterval(verificarServidor, 30000);
+    </script>
+</body>
+</html>
