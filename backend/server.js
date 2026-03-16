@@ -133,7 +133,21 @@ mimeType:req.file.mimetype
 
 const texto=result.response.text()
 
-const datos=JSON.parse(texto)
+let datos
+try{
+let texto = result.reponse.text()
+
+texto = texto.replace(/```json/g,"").replace(/```/g,"")
+
+datos = JSON.parse(texto)
+}catch{
+datos={
+problema:"No se pudo detectar el problema",
+categoria:"servicios",
+urgencia:"baja"  
+}
+
+}
 
 db.run(
 `INSERT INTO reportes(usuario,modulo,problema,categoria,urgencia,imagen)
