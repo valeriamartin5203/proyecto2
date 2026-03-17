@@ -1,49 +1,76 @@
-import {useState} from "react"
+import React, { useState } from 'react';
+import axios from 'axios';
 
-function Registro(){
+function Registro({ API_URL, mostrarAlerta, onRegistroExitoso }) {
+  const [usuario, setUsuario] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-const[usuario,setU]=useState("")
-const[password,setP]=useState("")
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!usuario || !password) {
+      mostrarAlerta('Completa todos los campos', 'error');
+      return;
+    }
 
-async function registro(){
+    if (password.length < 6) {
+      mostrarAlerta('La contraseña debe tener al menos 6 caracteres', 'error');
+      return;
+    }
 
-const res=await fetch("http://localhost:3000/registro",{
+    setLoading(true);
 
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({usuario,password})
+    try {
+      const response = await axios.post(`${API_URL}/registro`, {
+        usuario,
+        password
+      });
 
-})
+      if (response.data.success) {
+        mostrarAlerta('✅ Usuario registrado correctamente', 'success');
+        setUsuario('');
+        setPassword('');
+        onRegistroExitoso();
+      } else {
+        mostrarAlerta(response.data.mensaje, 'error');
+      }
+    } catch (error) {
+      mostrarAlerta('Error de conexión', 'error');
+    }
 
-const data=await res.json()
+    setLoading(false);
+  };
 
-alert(data.mensaje)
-
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="form-group">
+        <label>Usuario:</label>
+        <input
+          type="text"
+          value={usuario}
+          onChange={(e) => setUsuario(e.target.value)}
+          placeholder="Elige un usuario"
+          disabled={loading}
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Contraseña:</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Mínimo 6 caracteres"
+          disabled={loading}
+        />
+      </div>
+      
+      <button type="submit" disabled={loading}>
+        {loading ? 'Registrando...' : 'Registrarse'}
+      </button>
+    </form>
+  );
 }
 
-return(
-
-<div>
-
-<h3>Registro</h3>
-
-<input placeholder="usuario"
-onChange={e=>setU(e.target.value)}/>
-
-<input type="password"
-placeholder="password"
-onChange={e=>setP(e.target.value)}/>
-
-<button onClick={registro}>
-Registrarse
-</button>
-
-</div>
-
-)
-
-}
-
-export default Registro
+export default Registro;

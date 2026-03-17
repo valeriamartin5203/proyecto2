@@ -1,67 +1,125 @@
-import {useState} from "react"
+import React, { useState } from 'react';
+import axios from 'axios';
 
-const modulos=[
-"A","B","C","D","E","F","G","H","I","J",
-"K","L","M","N","O","P","Q","R","S","T",
-"U","V","W","X","Y","Z",
-"Z1","Z2","V2","ALPHA","BETA","L2","JOBS"
-]
+const MODULOS = [
+  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+  "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+  "U", "V", "W", "X", "Y", "Z",
+  "Z1", "Z2", "V2", "ALPHA", "BETA", "L2", "JOBS", "santander", "lona",
+  "zona de alimentos del p",
+  "zona de alimentos del x",
+  "zona de alimentos del t", 
+  "zona de alimentos del j",
+  "baños del e,i,alpha,beta,p,q,r,t,v,x,z1,z,y",
+  "laboratorio de ingenieria"
+].sort();
 
-function Reporte({usuario}){
+function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
+  const [modulo, setModulo] = useState('');
+  const [imagen, setImagen] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-const[imagen,setImagen]=useState(null)
-const[modulo,setModulo]=useState("A")
+  const handleImagenChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        mostrarAlerta('La imagen no debe superar los 10MB', 'error');
+        return;
+      }
+      
+      setImagen(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-async function enviar(){
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!modulo) {
+      mostrarAlerta('Debes seleccionar un módulo', 'error');
+      return;
+    }
 
-const form=new FormData()
+    if (!imagen) {
+      mostrarAlerta('Debes seleccionar una imagen', 'error');
+      return;
+    }
 
-form.append("imagen",imagen)
-form.append("usuario",usuario)
-form.append("modulo",modulo)
+    setLoading(true);
 
-const res=await fetch("http://localhost:3000/reportes",{
+    const formData = new FormData();
+    formData.append('usuario', usuario);
+    formData.append('modulo', modulo);
+    formData.append('imagen', imagen);
 
-method:"POST",
-body:form
+    try {
+      const response = await axios.post(`${API_URL}/reportes`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
-})
+      if (response.data.success) {
+        mostrarAlerta('✅ Reporte creado con éxito', 'success');
+        setModulo('');
+        setImagen(null);
+        setPreview(null);
+        onReporteCreado();
+        document.getElementById('imagen').value = '';
+      } else {
+        mostrarAlerta(response.data.mensaje, 'error');
+      }
+    } catch (error) {
+      mostrarAlerta('Error al crear reporte', 'error');
+    }
 
-const data=await res.json()
+    setLoading(false);
+  };
 
-alert("Problema detectado: "+data.problema)
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="form-group">
+        <label>📍 Módulo / Ubicación:</label>
+        <select
+          value={modulo}
+          onChange={(e) => setModulo(e.target.value)}
+          disabled={loading}
+        >
+          <option value="">-- Selecciona un módulo --</option>
+          {MODULOS.map((mod) => (
+            <option key={mod} value={mod}>
+              {mod}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="form-group">
+        <label>📸 Imagen del problema:</label>
+        <input
+          type="file"
+          id="imagen"
+          accept="image/*"
+          onChange={handleImagenChange}
+          disabled={loading}
+        />
+        <small>Formatos: PNG, JPG, JPEG (Máx: 10MB)</small>
+      </div>
 
+      {preview && (
+        <div className="preview-container">
+          <img src={preview} alt="Vista previa" />
+        </div>
+      )}
+      
+      <button type="submit" disabled={loading || !modulo}>
+        {loading ? 'Enviando...' : '📤 Enviar Reporte'}
+      </button>
+    </form>
+  );
 }
 
-return(
-
-<div>
-
-<h3>Enviar reporte</h3>
-
-<select onChange={e=>setModulo(e.target.value)}>
-
-{modulos.map(m=>(
-
-<option key={m}>{m}</option>
-
-))}
-
-</select>
-
-<input
-type="file"
-onChange={e=>setImagen(e.target.files[0])}
-/>
-
-<button onClick={enviar}>
-Enviar reporte
-</button>
-
-</div>
-
-)
-
-}
-
-export default Reporte
+export default ReporteForm;
