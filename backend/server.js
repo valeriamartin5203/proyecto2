@@ -15,10 +15,14 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Configuración CORS para producción
+app.use(cors({
+    origin: '*',
+}));
 app.use(express.json());
 
-// ========== BASE DE DATOS ==========
+// ========== BASE DE DATOS (SQLite) ==========
 import sqlite3 from "sqlite3";
 const dbPath = path.join(__dirname, "database.db");
 const db = new sqlite3.Database(dbPath);
@@ -50,25 +54,18 @@ console.log("✅ Base de datos conectada");
 // ========== CONFIGURACIÓN GEMINI GRATUITA ==========
 if (!process.env.GEMINI_API_KEY) {
     console.error("❌ Error: GEMINI_API_KEY no está definida");
-    console.error("📝 Crea un archivo .env con: GEMINI_API_KEY=tu_api_key_aqui");
+    console.error("📝 En Render, agrega la variable de entorno GEMINI_API_KEY");
     process.exit(1);
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// MODELO GRATUITO QUE FUNCIONA EN 2026:
-// Puedes elegir entre:
-// - "gemini-2.5-flash" (recomendado, 250 reportes/día)
-// - "gemini-2.5-flash-lite" (1000 reportes/día, más rápido)
-// - "gemini-2.0-flash" (versión anterior, 1500 reportes/día)
-
-const MODELO_GEMINI = "gemini-2.5-flash"; // Cambia según prefieras
+const MODELO_GEMINI = "gemini-2.5-flash"; // Modelo gratuito
 
 const model = genAI.getGenerativeModel({ 
     model: MODELO_GEMINI
 });
 
-console.log(`🤖 Gemini configurado con modelo GRATUITO: ${MODELO_GEMINI}`);
+console.log(`🤖 Gemini configurado con modelo: ${MODELO_GEMINI}`);
 
 // ========== CONFIGURACIÓN UPLOADS ==========
 const uploadDir = path.join(__dirname, "uploads");
@@ -89,18 +86,25 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB máximo
 });
 
-// ========== RUTAS ==========
-
-// Ruta de prueba
+// ========== RUTAS DE PRUEBA PARA PRODUCCIÓN ==========
 app.get("/", (req, res) => {
     res.json({ 
-        mensaje: "API de Reportes funcionando",
+        mensaje: "🚀 API de Reportes funcionando en Render",
         status: "online",
+        entorno: process.env.NODE_ENV || "development",
         modelo: MODELO_GEMINI
     });
 });
 
-// REGISTRO
+app.get("/api/health", (req, res) => {
+    res.json({ 
+        status: "OK", 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
+// ========== RUTAS DE USUARIOS ==========
 app.post("/registro", async (req, res) => {
     try {
         const { usuario, password } = req.body;
@@ -108,6 +112,13 @@ app.post("/registro", async (req, res) => {
         if (!usuario || !password) {
             return res.status(400).json({ 
                 mensaje: "Usuario y contraseña requeridos",
+                success: false 
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                mensaje: "La contraseña debe tener al menos 6 caracteres",
                 success: false 
             });
         }
@@ -149,6 +160,7 @@ app.post("/registro", async (req, res) => {
             );
         });
     } catch (error) {
+        console.error("Error en registro:", error);
         res.status(500).json({ 
             mensaje: "Error interno",
             success: false 
@@ -156,10 +168,16 @@ app.post("/registro", async (req, res) => {
     }
 });
 
-// LOGIN
 app.post("/login", (req, res) => {
     try {
         const { usuario, password } = req.body;
+
+        if (!usuario || !password) {
+            return res.status(400).json({ 
+                mensaje: "Usuario y contraseña requeridos",
+                success: false 
+            });
+        }
 
         db.get("SELECT * FROM users WHERE usuario = ?", [usuario], async (err, row) => {
             if (err) {
@@ -194,6 +212,7 @@ app.post("/login", (req, res) => {
             });
         });
     } catch (error) {
+        console.error("Error en login:", error);
         res.status(500).json({ 
             mensaje: "Error interno",
             success: false 
@@ -201,16 +220,15 @@ app.post("/login", (req, res) => {
     }
 });
 
-// CREAR REPORTE CON GEMINI GRATUITO
+// ========== RUTA DE REPORTES ==========
 app.post("/reportes", upload.single("imagen"), async (req, res) => {
     let imagePath = null;
 
     try {
         console.log("\n" + "=".repeat(50));
-        console.log(`📸 PROCESANDO CON ${MODELO_GEMINI}`);
+        console.log(`📸 PROCESANDO REPORTE EN PRODUCCIÓN`);
         console.log("=".repeat(50));
 
-        // 1. Validar archivo
         if (!req.file) {
             return res.status(400).json({ 
                 mensaje: "No se recibió ninguna imagen",
@@ -220,7 +238,6 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         imagePath = req.file.path;
         console.log("📁 Imagen guardada:", req.file.filename);
 
-        // 2. Validar datos
         const { usuario, modulo } = req.body;
         if (!usuario || !modulo) {
             if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
@@ -229,10 +246,8 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
                 success: false 
             });
         }
-        console.log("👤 Usuario:", usuario);
-        console.log("📍 Módulo:", modulo);
 
-        // 3. Verificar usuario
+        // Verificar usuario
         const userExists = await new Promise((resolve) => {
             db.get("SELECT id FROM users WHERE usuario = ?", [usuario], (err, row) => {
                 resolve(!!row);
@@ -242,59 +257,41 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         if (!userExists) {
             if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
             return res.status(400).json({ 
-                mensaje: "El usuario no existe. Regístrate primero.",
+                mensaje: "El usuario no existe",
                 success: false 
             });
         }
 
-        // 4. Preparar imagen para Gemini
+        // Analizar con Gemini
         const imageBuffer = fs.readFileSync(imagePath);
         const base64Image = imageBuffer.toString("base64");
 
-        // 5. Prompt optimizado
-        const prompt = `Eres un asistente experto en análisis de imágenes para reportes de mantenimiento.
-Analiza la imagen y responde SOLO con un JSON válido con esta estructura:
+        const prompt = `Analiza esta imagen y responde SOLO con un JSON válido con esta estructura:
 {
-    "problema": "Describe el problema específico en máximo 100 caracteres",
-    "categoria": "Selecciona UNA: Infraestructura, Limpieza, Seguridad, Tecnología, Servicios",
-    "urgencia": "Selecciona UNA: Baja, Media, Alta"
-}
-
-Ejemplos:
-- Pared rota → {"problema":"Pared con grietas estructurales","categoria":"Infraestructura","urgencia":"Alta"}
-- Basura en piso → {"problema":"Basura acumulada en el área","categoria":"Limpieza","urgencia":"Media"}
-- Cable suelto → {"problema":"Cables eléctricos expuestos","categoria":"Seguridad","urgencia":"Alta"}
-- Computadora dañada → {"problema":"Equipo de cómputo no enciende","categoria":"Tecnología","urgencia":"Media"}
-
-IMPORTANTE: Responde SOLO con el JSON.`;
+    "problema": "Describe el problema en máximo 100 caracteres",
+    "categoria": "Infraestructura, Limpieza, Seguridad, Tecnología o Servicios",
+    "urgencia": "Baja, Media o Alta"
+}`;
 
         console.log(`🤖 Enviando a ${MODELO_GEMINI}...`);
         
-        // 6. Llamar a Gemini
         const result = await model.generateContent([
             prompt,
             { inlineData: { data: base64Image, mimeType: req.file.mimetype } }
         ]);
 
         const responseText = result.response.text();
-        console.log("📥 Respuesta de Gemini:", responseText);
+        console.log("📥 Respuesta:", responseText);
 
-        // 7. Procesar respuesta
-        let cleanJson = responseText
-            .replace(/```json/g, "")
-            .replace(/```/g, "")
-            .trim();
-
+        // Procesar respuesta
+        let cleanJson = responseText.replace(/```json|```/g, '').trim();
         const jsonMatch = cleanJson.match(/\{.*\}/s);
-        if (jsonMatch) {
-            cleanJson = jsonMatch[0];
-        }
+        if (jsonMatch) cleanJson = jsonMatch[0];
 
         let datos;
         try {
             datos = JSON.parse(cleanJson);
         } catch (e) {
-            console.log("⚠️ Error parseando JSON, usando valores por defecto");
             datos = {
                 problema: "Problema detectado en la imagen",
                 categoria: "Infraestructura",
@@ -302,19 +299,18 @@ IMPORTANTE: Responde SOLO con el JSON.`;
             };
         }
 
-        // 8. Validar categoría
+        // Validar categorías
         const categoriasValidas = ["Infraestructura", "Limpieza", "Seguridad", "Tecnología", "Servicios"];
         if (!categoriasValidas.includes(datos.categoria)) {
             datos.categoria = "Infraestructura";
         }
 
-        // 9. Validar urgencia
         const urgenciasValidas = ["Baja", "Media", "Alta"];
         if (!urgenciasValidas.includes(datos.urgencia)) {
             datos.urgencia = "Media";
         }
 
-        // 10. Guardar en BD
+        // Guardar en BD
         db.run(
             `INSERT INTO reportes (usuario, modulo, problema, categoria, urgencia, imagen) 
              VALUES (?, ?, ?, ?, ?, ?)`,
@@ -323,13 +319,12 @@ IMPORTANTE: Responde SOLO con el JSON.`;
                 if (err) {
                     console.error("❌ Error BD:", err);
                     return res.status(500).json({ 
-                        mensaje: "Error al guardar en base de datos",
+                        mensaje: "Error al guardar",
                         success: false 
                     });
                 }
 
-                console.log("✅ Reporte guardado con ID:", this.lastID);
-                console.log("📊 Análisis Gemini:", datos);
+                console.log("✅ Reporte guardado ID:", this.lastID);
                 
                 res.json({
                     mensaje: "Reporte guardado con éxito",
@@ -348,35 +343,21 @@ IMPORTANTE: Responde SOLO con el JSON.`;
         );
 
     } catch (error) {
-        console.error("❌ Error general:", error);
+        console.error("❌ Error:", error);
         
-        // Limpiar archivo si existe
         if (imagePath && fs.existsSync(imagePath)) {
             try { fs.unlinkSync(imagePath); } catch (e) {}
         }
 
-        // Mensaje de error amigable
-        if (error.message.includes("API key")) {
-            res.status(500).json({ 
-                mensaje: "Error con la API de Gemini. Verifica tu API key en el archivo .env",
-                success: false 
-            });
-        } else if (error.message.includes("fetch") || error.message.includes("network")) {
-            res.status(500).json({ 
-                mensaje: "Error de conexión. Verifica tu internet.",
-                success: false 
-            });
-        } else {
-            res.status(500).json({ 
-                mensaje: "Error al procesar el reporte",
-                error: error.message,
-                success: false 
-            });
-        }
+        res.status(500).json({ 
+            mensaje: "Error procesando reporte",
+            error: error.message,
+            success: false 
+        });
     }
 });
 
-// OBTENER TODOS LOS REPORTES
+// OBTENER REPORTES
 app.get("/reportes", (req, res) => {
     db.all("SELECT * FROM reportes ORDER BY id DESC", [], (err, rows) => {
         if (err) {
@@ -385,32 +366,7 @@ app.get("/reportes", (req, res) => {
                 success: false 
             });
         }
-        res.json({
-            mensaje: "Reportes obtenidos correctamente",
-            success: true,
-            total: rows ? rows.length : 0,
-            reportes: rows || []
-        });
-    });
-});
-
-// OBTENER UN REPORTE POR ID
-app.get("/reportes/:id", (req, res) => {
-    const id = req.params.id;
-    db.get("SELECT * FROM reportes WHERE id = ?", [id], (err, row) => {
-        if (err) {
-            return res.status(500).json({ 
-                mensaje: "Error",
-                success: false 
-            });
-        }
-        if (!row) {
-            return res.status(404).json({ 
-                mensaje: "Reporte no encontrado",
-                success: false 
-            });
-        }
-        res.json(row);
+        res.json(rows || []);
     });
 });
 
@@ -418,15 +374,16 @@ app.get("/reportes/:id", (req, res) => {
 app.use("/uploads", express.static(uploadDir));
 
 // ========== INICIAR SERVIDOR ==========
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render usa puertos dinámicos
+
 app.listen(PORT, () => {
     console.log("\n" + "=".repeat(50));
-    console.log("🚀 SERVIDOR INICIADO CON GEMINI GRATUITO");
+    console.log("🚀 SERVIDOR LISTO PARA RENDER");
     console.log("=".repeat(50));
-    console.log(`📡 URL: http://localhost:${PORT}`);
+    console.log(`📡 Puerto: ${PORT}`);
     console.log(`📁 Uploads: ${uploadDir}`);
     console.log(`🗄️  BD: ${dbPath}`);
-    console.log(`🤖 Gemini: ${MODELO_GEMINI} (GRATUITO)`);
-    console.log(`💰 Plan: 100% GRATIS - Sin tarjeta de crédito`);
+    console.log(`🤖 Gemini: ${MODELO_GEMINI}`);
+    console.log(`🌍 Entorno: ${process.env.NODE_ENV || "development"}`);
     console.log("=".repeat(50) + "\n");
 });
