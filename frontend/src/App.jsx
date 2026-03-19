@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiCamera, FiList, FiLogIn, FiUserPlus } from 'react-icons/fi';
-import Login from './components/Login';
-import Registro from './components/Registro';
-import ReporteForm from './components/ReporteForm';
+import Login from './components/login';
+import Registro from './components/registro';
+import ReporteForm from './components/reporterorm';
 import ReportesList from './components/ReportesList';
 import Navbar from './components/Navbar';
 import './App.css';
