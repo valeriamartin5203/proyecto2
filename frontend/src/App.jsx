@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FiCamera, FiList, FiLogIn, FiUserPlus } from 'react-icons/fi';
 import Login from './components/login';
 import Registro from './components/registro';
-import ReporteForm from './components/reporterorm';
+import ReporteForm from './components/reporteform';
 import ReportesList from './components/ReportesList';
 import Navbar from './components/Navbar';
 import './App.css';
