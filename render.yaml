@@ -1,28 +1,14 @@
-# Backend - Web Service
+# backend
 - type: web
   name: backend-reportes
   runtime: node
-  repo: https://github.com/valeriamartin5203/proyecto2.git
-  branch: main
   rootDir: backend
   buildCommand: npm install
   startCommand: node server.js
-  envVars:
-    - key: NODE_VERSION
-      value: 18.18.0
-    - key: GEMINI_API_KEY
-      sync: false
-    - key: FRONTEND_URL
-      value: https://frontend-reportes.onrender.com
 
-# Frontend - Static Site
+# frontend  
 - type: static
   name: frontend-reportes
-  repo: https://github.com/valeriamartin5203/proyecto2.git
-  branch: main
   rootDir: frontend
   buildCommand: npm run build
   publishPath: ./dist
-  envVars:
-    - key: VITE_API_URL
-      value: https://backend-reportes.onrender.com
