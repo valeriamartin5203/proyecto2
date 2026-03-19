@@ -17,13 +17,13 @@ services:
         value: https://frontend-reportes.onrender.com
 
   # ===== FRONTEND =====
-  - type: static
+  - type: static_site  # 👈 CAMBIADO de "static" a "static_site"
     name: frontend-reportes
     repo: https://github.com/valeriamartin5203/proyecto2.git
     branch: main
     rootDir: frontend
     buildCommand: npm run build
-    publishPath: dist
+    publishPath: dist  # Para Vite (si usas Create React App sería 'build')
     envVars:
       - key: VITE_API_URL
         value: https://backend-reportes.onrender.com
