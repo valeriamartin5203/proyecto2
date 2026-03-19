@@ -1,14 +1,27 @@
-# backend
+# Backend
 - type: web
   name: backend-reportes
   runtime: node
+  repo: https://github.com/valeriamartin5203/proyecto2
+  branch: main
   rootDir: backend
   buildCommand: npm install
   startCommand: node server.js
+  healthCheckPath: /
+  envVars:
+    - key: NODE_VERSION
+      value: 18.18.0
+    - key: GEMINI_API_KEY
+      sync: false
 
-# frontend  
+# Frontend
 - type: static
   name: frontend-reportes
+  repo: https://github.com/valeriamartin5203/proyecto2
+  branch: main
   rootDir: frontend
   buildCommand: npm run build
-  publishPath: ./dist
+  publishPath: dist
+  envVars:
+    - key: VITE_API_URL
+      value: https://backend-reportes.onrender.com
