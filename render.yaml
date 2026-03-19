@@ -1,29 +1,29 @@
-# render.yaml - Configuración para desplegar backend y frontend juntos
-
 services:
-  # ===== BACKEND (Web Service) =====
+  # ===== BACKEND =====
   - type: web
     name: backend-reportes
     runtime: node
     repo: https://github.com/valeriamartin5203/proyecto2.git
     branch: main
-    rootDir: backend  # ← ¡CLAVE! Indica que está en subcarpeta
+    rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: 18.18.0
       - key: GEMINI_API_KEY
-        sync: false  # La configurarás manualmente en el dashboard
+        sync: false
+      - key: FRONTEND_URL
+        value: https://frontend-reportes.onrender.com
 
-  # ===== FRONTEND (Static Site) =====
+  # ===== FRONTEND =====
   - type: static
     name: frontend-reportes
-    repo: https://github.com/TU_USUARIO/TU_REPOSITORIO.git
+    repo: https://github.com/valeriamartin5203/proyecto2.git
     branch: main
-    rootDir: frontend  # ← ¡CLAVE! Indica que está en subcarpeta
+    rootDir: frontend
     buildCommand: npm run build
-    publishPath: dist  # Para Vite (si usas Create React App sería 'build')
+    publishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://backend-reportes.onrender.com  # URL del backend
+        value: https://backend-reportes.onrender.com

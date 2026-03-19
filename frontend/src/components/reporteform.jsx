@@ -27,12 +27,9 @@ function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
         mostrarAlerta('La imagen no debe superar los 10MB', 'error');
         return;
       }
-      
       setImagen(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-      };
+      reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
@@ -41,12 +38,12 @@ function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
     e.preventDefault();
     
     if (!modulo) {
-      mostrarAlerta('Debes seleccionar un módulo', 'error');
+      mostrarAlerta('Selecciona un módulo', 'error');
       return;
     }
 
     if (!imagen) {
-      mostrarAlerta('Debes seleccionar una imagen', 'error');
+      mostrarAlerta('Selecciona una imagen', 'error');
       return;
     }
 
@@ -58,17 +55,14 @@ function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
     formData.append('imagen', imagen);
 
     try {
-      const response = await axios.post(`${API_URL}/reportes`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await axios.post(`${API_URL}/reportes`, formData);
 
       if (response.data.success) {
-        mostrarAlerta('✅ Reporte creado con éxito', 'success');
+        mostrarAlerta('✅ Reporte creado', 'success');
         setModulo('');
         setImagen(null);
         setPreview(null);
         onReporteCreado();
-        document.getElementById('imagen').value = '';
       } else {
         mostrarAlerta(response.data.mensaje, 'error');
       }
@@ -82,31 +76,27 @@ function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-group">
-        <label>📍 Módulo / Ubicación:</label>
+        <label>📍 Módulo:</label>
         <select
           value={modulo}
           onChange={(e) => setModulo(e.target.value)}
           disabled={loading}
         >
-          <option value="">-- Selecciona un módulo --</option>
+          <option value="">-- Selecciona --</option>
           {MODULOS.map((mod) => (
-            <option key={mod} value={mod}>
-              {mod}
-            </option>
+            <option key={mod} value={mod}>{mod}</option>
           ))}
         </select>
       </div>
       
       <div className="form-group">
-        <label>📸 Imagen del problema:</label>
+        <label>📸 Imagen:</label>
         <input
           type="file"
-          id="imagen"
           accept="image/*"
           onChange={handleImagenChange}
           disabled={loading}
         />
-        <small>Formatos: PNG, JPG, JPEG (Máx: 10MB)</small>
       </div>
 
       {preview && (

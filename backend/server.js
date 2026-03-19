@@ -7,23 +7,25 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import sqlite3 from "sqlite3";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Cargar variables de entorno
 dotenv.config();
 
 const app = express();
 
-// Configuración CORS para producción
+// Configuración CORS para producción y desarrollo
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 app.use(cors({
-    origin: '*',
+    origin: [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'],
+    credentials: true
 }));
+
 app.use(express.json());
 
-// ========== BASE DE DATOS (SQLite) ==========
-import sqlite3 from "sqlite3";
+// ========== BASE DE DATOS ==========
 const dbPath = path.join(__dirname, "database.db");
 const db = new sqlite3.Database(dbPath);
 
@@ -44,30 +46,27 @@ db.serialize(() => {
             problema TEXT NOT NULL,
             categoria TEXT NOT NULL,
             urgencia TEXT NOT NULL,
-            imagen TEXT
+            imagen TEXT,
+            fecha DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 });
 
 console.log("✅ Base de datos conectada");
 
-// ========== CONFIGURACIÓN GEMINI GRATUITA ==========
+// ========== GEMINI ==========
 if (!process.env.GEMINI_API_KEY) {
-    console.error("❌ Error: GEMINI_API_KEY no está definida");
-    console.error("📝 En Render, agrega la variable de entorno GEMINI_API_KEY");
+    console.error("❌ Error: GEMINI_API_KEY no definida");
     process.exit(1);
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODELO_GEMINI = "gemini-2.5-flash"; // Modelo gratuito
+const MODELO_GEMINI = "gemini-2.5-flash";
+const model = genAI.getGenerativeModel({ model: MODELO_GEMINI });
 
-const model = genAI.getGenerativeModel({ 
-    model: MODELO_GEMINI
-});
+console.log(`🤖 Gemini configurado con: ${MODELO_GEMINI}`);
 
-console.log(`🤖 Gemini configurado con modelo: ${MODELO_GEMINI}`);
-
-// ========== CONFIGURACIÓN UPLOADS ==========
+// ========== UPLOADS ==========
 const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -83,10 +82,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB máximo
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// ========== RUTAS DE PRUEBA PARA PRODUCCIÓN ==========
+// ========== RUTAS ==========
 app.get("/", (req, res) => {
     res.json({ 
         mensaje: "🚀 API de Reportes funcionando en Render",
@@ -104,7 +103,6 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-// ========== RUTAS DE USUARIOS ==========
 app.post("/registro", async (req, res) => {
     try {
         const { usuario, password } = req.body;
@@ -116,21 +114,7 @@ app.post("/registro", async (req, res) => {
             });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ 
-                mensaje: "La contraseña debe tener al menos 6 caracteres",
-                success: false 
-            });
-        }
-
         db.get("SELECT * FROM users WHERE usuario = ?", [usuario], async (err, row) => {
-            if (err) {
-                return res.status(500).json({ 
-                    mensaje: "Error en BD",
-                    success: false 
-                });
-            }
-
             if (row) {
                 return res.json({ 
                     mensaje: "Usuario ya existe", 
@@ -149,18 +133,13 @@ app.post("/registro", async (req, res) => {
                         });
                     }
                     res.json({ 
-                        mensaje: "Usuario registrado correctamente", 
-                        success: true,
-                        usuario: {
-                            id: this.lastID,
-                            nombre: usuario
-                        }
+                        mensaje: "Usuario registrado", 
+                        success: true 
                     });
                 }
             );
         });
     } catch (error) {
-        console.error("Error en registro:", error);
         res.status(500).json({ 
             mensaje: "Error interno",
             success: false 
@@ -172,24 +151,10 @@ app.post("/login", (req, res) => {
     try {
         const { usuario, password } = req.body;
 
-        if (!usuario || !password) {
-            return res.status(400).json({ 
-                mensaje: "Usuario y contraseña requeridos",
-                success: false 
-            });
-        }
-
         db.get("SELECT * FROM users WHERE usuario = ?", [usuario], async (err, row) => {
-            if (err) {
-                return res.status(500).json({ 
-                    mensaje: "Error en BD",
-                    success: false 
-                });
-            }
-
             if (!row) {
                 return res.json({ 
-                    mensaje: "Usuario o contraseña incorrectos", 
+                    mensaje: "Usuario incorrecto", 
                     success: false 
                 });
             }
@@ -197,7 +162,7 @@ app.post("/login", (req, res) => {
             const valido = await bcrypt.compare(password, row.password);
             if (!valido) {
                 return res.json({ 
-                    mensaje: "Usuario o contraseña incorrectos", 
+                    mensaje: "Contraseña incorrecta", 
                     success: false 
                 });
             }
@@ -205,14 +170,10 @@ app.post("/login", (req, res) => {
             res.json({ 
                 mensaje: "Login correcto", 
                 success: true, 
-                usuario: {
-                    id: row.id,
-                    nombre: row.usuario
-                }
+                usuario: row.usuario 
             });
         });
     } catch (error) {
-        console.error("Error en login:", error);
         res.status(500).json({ 
             mensaje: "Error interno",
             success: false 
@@ -220,34 +181,29 @@ app.post("/login", (req, res) => {
     }
 });
 
-// ========== RUTA DE REPORTES ==========
 app.post("/reportes", upload.single("imagen"), async (req, res) => {
     let imagePath = null;
 
     try {
-        console.log("\n" + "=".repeat(50));
-        console.log(`📸 PROCESANDO REPORTE EN PRODUCCIÓN`);
-        console.log("=".repeat(50));
+        console.log("\n📸 Procesando reporte...");
 
         if (!req.file) {
             return res.status(400).json({ 
-                mensaje: "No se recibió ninguna imagen",
+                mensaje: "No se recibió imagen",
                 success: false 
             });
         }
         imagePath = req.file.path;
-        console.log("📁 Imagen guardada:", req.file.filename);
 
         const { usuario, modulo } = req.body;
         if (!usuario || !modulo) {
-            if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+            fs.unlinkSync(imagePath);
             return res.status(400).json({ 
-                mensaje: "Faltan datos: usuario y módulo son obligatorios",
+                mensaje: "Faltan datos",
                 success: false 
             });
         }
 
-        // Verificar usuario
         const userExists = await new Promise((resolve) => {
             db.get("SELECT id FROM users WHERE usuario = ?", [usuario], (err, row) => {
                 resolve(!!row);
@@ -255,9 +211,9 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         });
 
         if (!userExists) {
-            if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+            fs.unlinkSync(imagePath);
             return res.status(400).json({ 
-                mensaje: "El usuario no existe",
+                mensaje: "Usuario no existe",
                 success: false 
             });
         }
@@ -266,24 +222,15 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         const imageBuffer = fs.readFileSync(imagePath);
         const base64Image = imageBuffer.toString("base64");
 
-        const prompt = `Analiza esta imagen y responde SOLO con un JSON válido con esta estructura:
-{
-    "problema": "Describe el problema en máximo 100 caracteres",
-    "categoria": "Infraestructura, Limpieza, Seguridad, Tecnología o Servicios",
-    "urgencia": "Baja, Media o Alta"
-}`;
+        const prompt = `Analiza esta imagen y responde SOLO con JSON:
+        {"problema":"descripción","categoria":"Infraestructura/Limpieza/Seguridad/Tecnología/Servicios","urgencia":"Baja/Media/Alta"}`;
 
-        console.log(`🤖 Enviando a ${MODELO_GEMINI}...`);
-        
         const result = await model.generateContent([
             prompt,
             { inlineData: { data: base64Image, mimeType: req.file.mimetype } }
         ]);
 
         const responseText = result.response.text();
-        console.log("📥 Respuesta:", responseText);
-
-        // Procesar respuesta
         let cleanJson = responseText.replace(/```json|```/g, '').trim();
         const jsonMatch = cleanJson.match(/\{.*\}/s);
         if (jsonMatch) cleanJson = jsonMatch[0];
@@ -291,51 +238,34 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         let datos;
         try {
             datos = JSON.parse(cleanJson);
-        } catch (e) {
+        } catch {
             datos = {
-                problema: "Problema detectado en la imagen",
+                problema: "Problema detectado",
                 categoria: "Infraestructura",
                 urgencia: "Media"
             };
         }
 
-        // Validar categorías
-        const categoriasValidas = ["Infraestructura", "Limpieza", "Seguridad", "Tecnología", "Servicios"];
-        if (!categoriasValidas.includes(datos.categoria)) {
-            datos.categoria = "Infraestructura";
-        }
-
-        const urgenciasValidas = ["Baja", "Media", "Alta"];
-        if (!urgenciasValidas.includes(datos.urgencia)) {
-            datos.urgencia = "Media";
-        }
-
-        // Guardar en BD
         db.run(
             `INSERT INTO reportes (usuario, modulo, problema, categoria, urgencia, imagen) 
              VALUES (?, ?, ?, ?, ?, ?)`,
             [usuario, modulo, datos.problema, datos.categoria, datos.urgencia, req.file.filename],
             function(err) {
                 if (err) {
-                    console.error("❌ Error BD:", err);
                     return res.status(500).json({ 
-                        mensaje: "Error al guardar",
+                        mensaje: "Error guardando",
                         success: false 
                     });
                 }
 
-                console.log("✅ Reporte guardado ID:", this.lastID);
-                
                 res.json({
-                    mensaje: "Reporte guardado con éxito",
+                    mensaje: "Reporte guardado",
                     success: true,
                     reporte: {
                         id: this.lastID,
                         usuario,
                         modulo,
-                        problema: datos.problema,
-                        categoria: datos.categoria,
-                        urgencia: datos.urgencia,
+                        ...datos,
                         imagen: req.file.filename
                     }
                 });
@@ -343,47 +273,30 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         );
 
     } catch (error) {
-        console.error("❌ Error:", error);
-        
+        console.error("Error:", error);
         if (imagePath && fs.existsSync(imagePath)) {
-            try { fs.unlinkSync(imagePath); } catch (e) {}
+            fs.unlinkSync(imagePath);
         }
-
         res.status(500).json({ 
-            mensaje: "Error procesando reporte",
-            error: error.message,
+            mensaje: "Error procesando",
             success: false 
         });
     }
 });
 
-// OBTENER REPORTES
 app.get("/reportes", (req, res) => {
     db.all("SELECT * FROM reportes ORDER BY id DESC", [], (err, rows) => {
         if (err) {
-            return res.status(500).json({ 
-                mensaje: "Error obteniendo reportes",
-                success: false 
-            });
+            return res.status(500).json({ mensaje: "Error" });
         }
         res.json(rows || []);
     });
 });
 
-// SERVIR IMÁGENES
 app.use("/uploads", express.static(uploadDir));
 
-// ========== INICIAR SERVIDOR ==========
-const PORT = process.env.PORT || 10000; // Render usa puertos dinámicos
-
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log("\n" + "=".repeat(50));
-    console.log("🚀 SERVIDOR LISTO PARA RENDER");
-    console.log("=".repeat(50));
-    console.log(`📡 Puerto: ${PORT}`);
-    console.log(`📁 Uploads: ${uploadDir}`);
-    console.log(`🗄️  BD: ${dbPath}`);
+    console.log(`\n🚀 Backend en puerto ${PORT}`);
     console.log(`🤖 Gemini: ${MODELO_GEMINI}`);
-    console.log(`🌍 Entorno: ${process.env.NODE_ENV || "development"}`);
-    console.log("=".repeat(50) + "\n");
 });
