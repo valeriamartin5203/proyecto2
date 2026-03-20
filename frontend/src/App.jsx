@@ -8,8 +8,11 @@ import ReportesList from './components/ReportesList';
 import Navbar from './components/Navbar';
 import './App.css';
 
-// URL de la API según el entorno
+// URL de la API según el entorno - ¡VERIFICA QUE ESTO ESTÉ CORRECTO!
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+// Configuración global de axios
+axios.defaults.withCredentials = true;
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -19,8 +22,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('login');
   const [cargandoReportes, setCargandoReportes] = useState(false);
 
+  // Verificar conexión con el backend al iniciar
   useEffect(() => {
-    verificarServidor();
+    verificarConexionBackend();
     const savedUser = localStorage.getItem('usuario');
     if (savedUser) {
       setUsuario(savedUser);
@@ -33,12 +37,23 @@ function App() {
     }
   }, [usuario]);
 
-  const verificarServidor = async () => {
+  const verificarConexionBackend = async () => {
     try {
-      await axios.get(`${API_URL}/`);
+      // Intentar conectar con el backend
+      const response = await axios.get(`${API_URL}/api/test`);
+      console.log('✅ Backend conectado:', response.data);
       setServerStatus('online');
+      
+      // También verificar el endpoint principal
+      const mainResponse = await axios.get(`${API_URL}/`);
+      console.log('✅ Backend principal:', mainResponse.data);
+      
     } catch (error) {
+      console.error('❌ Error conectando al backend:', error.message);
       setServerStatus('offline');
+      
+      // Mostrar alerta con información de debug
+      mostrarAlerta(`Error de conexión: ${API_URL} no responde. Verifica la variable VITE_API_URL`, 'error');
     }
   };
 
@@ -49,6 +64,7 @@ function App() {
       setReportes(response.data || []);
     } catch (error) {
       console.error('Error cargando reportes:', error);
+      mostrarAlerta('Error al cargar los reportes', 'error');
     } finally {
       setCargandoReportes(false);
     }
@@ -89,6 +105,21 @@ function App() {
       <div className="header">
         <h1>📸 Sistema de Reportes con IA</h1>
         <p>Sube una imagen y la IA analizará el problema automáticamente</p>
+        {serverStatus === 'offline' && (
+          <div style={{ 
+            marginTop: '10px', 
+            padding: '10px', 
+            background: '#ff6b6b', 
+            color: 'white',
+            borderRadius: '8px'
+          }}>
+            ⚠️ El backend no está conectado. Verifica que la variable VITE_API_URL sea:
+            <br />
+            <code style={{ background: '#333', padding: '5px', borderRadius: '4px', display: 'inline-block', marginTop: '5px' }}>
+              {API_URL}
+            </code>
+          </div>
+        )}
       </div>
 
       <div className="grid">
@@ -147,9 +178,9 @@ function App() {
               <p>🔒 Inicia sesión para ver los reportes</p>
             </div>
           ) : cargandoReportes ? (
-            <div className="text-center p-4">
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <div className="loading"></div>
-              <p>Cargando...</p>
+              <p>Cargando reportes...</p>
             </div>
           ) : (
             <ReportesList reportes={reportes} />

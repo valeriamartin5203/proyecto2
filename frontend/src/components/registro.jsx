@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
-function Registro({ API_URL, mostrarAlerta, onRegistroExitoso }) {
+function Registro({ mostrarAlerta, onRegistroExitoso }) {
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,13 +22,10 @@ function Registro({ API_URL, mostrarAlerta, onRegistroExitoso }) {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/registro`, {
-        usuario,
-        password
-      });
+      const response = await api.post('/registro', { usuario, password });
 
       if (response.data.success) {
-        mostrarAlerta('✅ Usuario registrado correctamente', 'success');
+        mostrarAlerta('✅ Usuario registrado', 'success');
         setUsuario('');
         setPassword('');
         onRegistroExitoso();
@@ -36,10 +33,10 @@ function Registro({ API_URL, mostrarAlerta, onRegistroExitoso }) {
         mostrarAlerta(response.data.mensaje, 'error');
       }
     } catch (error) {
-      mostrarAlerta('Error de conexión', 'error');
+      mostrarAlerta(error.message || 'Error al registrar', 'error');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -50,7 +47,6 @@ function Registro({ API_URL, mostrarAlerta, onRegistroExitoso }) {
           type="text"
           value={usuario}
           onChange={(e) => setUsuario(e.target.value)}
-          placeholder="Elige un usuario"
           disabled={loading}
         />
       </div>
@@ -61,7 +57,6 @@ function Registro({ API_URL, mostrarAlerta, onRegistroExitoso }) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mínimo 6 caracteres"
           disabled={loading}
         />
       </div>

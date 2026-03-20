@@ -7,7 +7,6 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import sqlite3 from "sqlite3";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,16 +15,24 @@ dotenv.config();
 
 const app = express();
 
-// Configuración CORS para producción y desarrollo
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+// ========== CONFIGURACIÓN CORS PARA PRODUCCIÓN ==========
+// Esta es la PARTE MÁS IMPORTANTE para la conexión
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://frontend-reportes.onrender.com';
+
 app.use(cors({
     origin: [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'],
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
+
+// Manejar preflight requests (OPTIONS)
+app.options('*', cors());
 
 app.use(express.json());
 
 // ========== BASE DE DATOS ==========
+import sqlite3 from "sqlite3";
 const dbPath = path.join(__dirname, "database.db");
 const db = new sqlite3.Database(dbPath);
 
@@ -91,15 +98,17 @@ app.get("/", (req, res) => {
         mensaje: "🚀 API de Reportes funcionando en Render",
         status: "online",
         entorno: process.env.NODE_ENV || "development",
-        modelo: MODELO_GEMINI
+        modelo: MODELO_GEMINI,
+        frontend_permitido: FRONTEND_URL
     });
 });
 
-app.get("/api/health", (req, res) => {
+// Endpoint para probar CORS
+app.get("/api/test", (req, res) => {
     res.json({ 
-        status: "OK", 
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        message: "✅ Conexión exitosa", 
+        frontend: req.headers.origin || 'desconocido',
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -299,4 +308,5 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`\n🚀 Backend en puerto ${PORT}`);
     console.log(`🤖 Gemini: ${MODELO_GEMINI}`);
+    console.log(`🔗 Frontend permitido: ${FRONTEND_URL}`);
 });

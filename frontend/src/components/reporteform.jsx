@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const MODULOS = [
   "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
   "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
   "U", "V", "W", "X", "Y", "Z",
   "Z1", "Z2", "V2", "ALPHA", "BETA", "L2", "JOBS", "santander", "lona",
-  "zona de alimentos del p",
-  "zona de alimentos del x",
-  "zona de alimentos del t", 
-  "zona de alimentos del j",
-  "baños del e,i,alpha,beta,p,q,r,t,v,x,z1,z,y",
+  "zona de alimentos del p", "zona de alimentos del x", "zona de alimentos del t", 
+  "zona de alimentos del j", "baños del e,i,alpha,beta,p,q,r,t,v,x,z1,z,y",
   "laboratorio de ingenieria"
 ].sort();
 
-function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
+function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
   const [modulo, setModulo] = useState('');
   const [imagen, setImagen] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -55,7 +52,10 @@ function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
     formData.append('imagen', imagen);
 
     try {
-      const response = await axios.post(`${API_URL}/reportes`, formData);
+      // Usar la instancia de api configurada
+      const response = await api.post('/reportes', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
       if (response.data.success) {
         mostrarAlerta('✅ Reporte creado', 'success');
@@ -67,10 +67,11 @@ function ReporteForm({ API_URL, usuario, onReporteCreado, mostrarAlerta }) {
         mostrarAlerta(response.data.mensaje, 'error');
       }
     } catch (error) {
-      mostrarAlerta('Error al crear reporte', 'error');
+      console.error('Error:', error);
+      mostrarAlerta(error.message || 'Error al crear reporte', 'error');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (

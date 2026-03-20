@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
-function Login({ API_URL, onLogin, mostrarAlerta }) {
+function Login({ onLogin, mostrarAlerta }) {
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,23 +17,18 @@ function Login({ API_URL, onLogin, mostrarAlerta }) {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/login`, {
-        usuario,
-        password
-      });
+      const response = await api.post('/login', { usuario, password });
 
       if (response.data.success) {
         onLogin(usuario);
-        setUsuario('');
-        setPassword('');
       } else {
         mostrarAlerta(response.data.mensaje, 'error');
       }
     } catch (error) {
-      mostrarAlerta('Error de conexión', 'error');
+      mostrarAlerta(error.message || 'Error al conectar', 'error');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -44,7 +39,6 @@ function Login({ API_URL, onLogin, mostrarAlerta }) {
           type="text"
           value={usuario}
           onChange={(e) => setUsuario(e.target.value)}
-          placeholder="Ingresa tu usuario"
           disabled={loading}
         />
       </div>
@@ -55,13 +49,12 @@ function Login({ API_URL, onLogin, mostrarAlerta }) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Ingresa tu contraseña"
           disabled={loading}
         />
       </div>
       
       <button type="submit" disabled={loading}>
-        {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+        {loading ? 'Conectando...' : 'Iniciar Sesión'}
       </button>
     </form>
   );
