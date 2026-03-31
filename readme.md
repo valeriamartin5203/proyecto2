@@ -166,14 +166,14 @@ proyecto2/
 
 ## 🤖 Tecnologías utilizadas
 
-|Tecnología||¿Qué hace?|
-|:---||:---|
-|Node.js + Express| |Servidor backend|
-|React + Vite| |Interfaz de usuario|
-|Google Gemini AI| |Análisis de imágenes con IA|
-|SQLite| |Base de datos ligera|
-|Axios| |Peticiones HTTP|
-|Render| |Plataforma de despliegue|
+| Tecnología | ¿Qué hace? |
+| :--- | :--- |
+| Node.js + Express | Servidor backend |
+| React + Vite | Interfaz de usuario |
+| Google Gemini AI | Análisis de imágenes con IA |
+| SQLite | Base de datos ligera |
+| Axios | Peticiones HTTP |
+| Render | Plataforma de despliegue |
 
 ---
 
