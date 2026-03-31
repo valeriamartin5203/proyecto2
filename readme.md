@@ -49,8 +49,6 @@ Este proyecto nació de la necesidad de **automatizar y agilizar** el proceso de
 git clone https://github.com/valeriamartin5203/proyecto2
 cd proyecto2
 
----
-
 **Opción B - Descargar ZIP:**
 
 Ve a https://github.com/valeriamartin5203/proyecto2
@@ -58,3 +56,7 @@ Ve a https://github.com/valeriamartin5203/proyecto2
 Haz clic en "Code" → "Download ZIP"
 
 Extrae el archivo y entra a la carpeta proyecto2
+
+---
+
+## Paso 2: Configurar el Backend
