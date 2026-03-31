@@ -148,7 +148,7 @@ Backend: https://backend-reportes.onrender.com
 ## 🚀 Estructura del proyecto
 
 
-´´´ bash
+```bash
 proyecto2/
 ├── backend/               # Servidor con Node.js
 │   ├── server.js         # Código principal del backend
