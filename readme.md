@@ -1,132 +1,60 @@
-# 🏫 Plataforma de Reportes del cucei con IA
+# 📸 Sistema de Reportes con IA
 
-## 📌 Descripción
+## 📖 ¿Qué es este proyecto?
 
-Esta plataforma web permite a los estudiantes **reportar problemáticas dentro del campus universitario**, como fallas en infraestructura, problemas de limpieza o fallas tecnológicas.
+Este proyecto es un **sistema completo de gestión de reportes de mantenimiento e incidencias** que utiliza **Inteligencia Artificial** para analizar imágenes automáticamente.
 
-El sistema integra **Inteligencia Artificial** para **analizar y clasificar automáticamente los reportes enviados por los usuarios**, facilitando su organización y seguimiento.
+Cuando un usuario detecta un problema (como una pared rota, basura acumulada, un cable suelto o una computadora dañada), puede tomar una foto, subirla al sistema, y la IA de **Gemini** analizará la imagen para determinar:
+- **Problema**: Descripción clara de lo que ocurre
+- **Categoría**: Infraestructura, Limpieza, Seguridad, Tecnología o Servicios
+- **Urgencia**: Baja, Media o Alta
 
----
-
-## 🎯 Objetivo del proyecto
-
-Desarrollar una aplicación web que permita:
-
-* Registrar problemáticas del campus.
-* Clasificar automáticamente los reportes mediante IA.
-* Visualizar los reportes enviados por los estudiantes.
-* Facilitar la gestión y solución de problemas dentro del campus.
+El sistema guarda todos los reportes y permite ver un historial de los problemas reportados.
 
 ---
 
-## 🛠 Tecnologías utilizadas
+## 🎯 ¿Por qué se creó?
 
-### Frontend
+Este proyecto nació de la necesidad de **automatizar y agilizar** el proceso de reporte de incidencias en entornos como:
+- Instituciones educativas (escuelas, universidades)
+- Edificios corporativos
+- Centros comerciales
+- Espacios públicos
 
-* React
-* Vite
-* HTML
-* CSS
-
-### Backend
-
-* Node.js
-* Express.js
-
-### Base de datos
-
-* MongoDB (o MySQL)
-
-### Inteligencia Artificial
-
-* API de IA para clasificación de texto.
+**Beneficios:**
+- ✅ **Ahorro de tiempo**: No hay que escribir manualmente el problema
+- ✅ **Mayor precisión**: La IA detecta y clasifica automáticamente
+- ✅ **Priorización clara**: Clasificación por urgencia para atender primero lo crítico
+- ✅ **Historial completo**: Todos los reportes quedan registrados
+- ✅ **Accesible desde cualquier lugar**: Desplegado en la nube
 
 ---
 
-## 📂 Estructura del proyecto
+## 💻 ¿Cómo desplegar en local?
 
-```
-campus-reportes-ai
-│
-├── frontend
-│   ├── src
-│   └── public
-│
-├── backend
-│   ├── server.js
-│   └── routes
-│
-└── README.md
-```
+### Requisitos previos
+
+| Requisito | Descripción | Dónde descargar |
+|-----------|-------------|-----------------|
+| **Node.js** | Entorno para ejecutar JavaScript en el servidor | [https://nodejs.org](https://nodejs.org) (versión LTS) |
+| **Git** | Para clonar el repositorio (opcional) | [https://git-scm.com](https://git-scm.com) |
+| **API Key de Gemini** | Clave para usar la IA de Google | [https://aistudio.google.com](https://aistudio.google.com) |
 
 ---
 
-## ⚙️ Instalación
+### Paso 1: Descargar el proyecto
 
-### 1. Clonar el repositorio
-
-```
-git clone https://github.com/usuario/campus-reportes-ai.git
-```
-
-### 2. Entrar a la carpeta del proyecto
-
-```
-cd campus-reportes-ai
-```
-
-### 3. Instalar dependencias del backend
-
-```
-npm install
-```
-
-### 4. Ejecutar el servidor
-
-```
-node server.js
-```
-
-El servidor se ejecutará en:
-
-```
-http://localhost:3000
-```
+**Opción A - Clonar con Git:**
+```bash
+git clone https://github.com/valeriamartin5203/proyecto2
+cd proyecto2
 
 ---
 
-## 🚀 Funcionamiento del sistema
+**Opción B - Descargar ZIP:**
 
-1. El usuario envía un reporte desde la plataforma.
-2. El servidor recibe el reporte.
-3. La IA analiza la descripción del problema.
-4. La IA clasifica el reporte en una categoría.
-5. El reporte se guarda en la base de datos.
+Ve a https://github.com/valeriamartin5203/proyecto2
 
----
+Haz clic en "Code" → "Download ZIP"
 
-## 📌 Ejemplo de reporte
-
-Título:
-
-```
-Falla de internet en laboratorio
-```
-
-Descripción:
-
-```
-No hay conexión a internet en el laboratorio de cómputo del edificio C.
-```
-
-Clasificación automática:
-
-```
-Tecnología
-```
-
----
-
-## Autor
-
-Proyecto desarrollado como práctica para la materia de **Programación para Internet**.
+Extrae el archivo y entra a la carpeta proyecto2
