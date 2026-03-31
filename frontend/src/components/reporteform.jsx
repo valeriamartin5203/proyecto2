@@ -2,13 +2,10 @@ import React, { useState } from 'react';
 import api from '../services/api';
 
 const MODULOS = [
-  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-  "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-  "U", "V", "W", "X", "Y", "Z",
-  "Z1", "Z2", "V2", "ALPHA", "BETA", "L2", "JOBS", "santander", "lona",
-  "zona de alimentos del p", "zona de alimentos del x", "zona de alimentos del t", 
-  "zona de alimentos del j", "baños del e,i,alpha,beta,p,q,r,t,v,x,z1,z,y",
-  "laboratorio de ingenieria"
+  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+  "U", "V", "W", "X", "Y", "Z", "Z1", "Z2", "V2", "ALPHA", "BETA", "L2", "JOBS", "santander", "lona",
+  "zona de alimentos del p", "zona de alimentos del x", "zona de alimentos del t", "zona de alimentos del j",
+  "baños del e,i,alpha,beta,p,q,r,t,v,x,z1,z,y", "laboratorio de ingenieria"
 ].sort();
 
 function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
@@ -20,10 +17,7 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
   const handleImagenChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        mostrarAlerta('La imagen no debe superar los 10MB', 'error');
-        return;
-      }
+      if (file.size > 10 * 1024 * 1024) return mostrarAlerta('La imagen no debe superar los 10MB', 'error');
       setImagen(file);
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
@@ -33,17 +27,8 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!modulo) {
-      mostrarAlerta('Selecciona un módulo', 'error');
-      return;
-    }
-
-    if (!imagen) {
-      mostrarAlerta('Selecciona una imagen', 'error');
-      return;
-    }
-
+    if (!modulo) return mostrarAlerta('Selecciona un módulo', 'error');
+    if (!imagen) return mostrarAlerta('Selecciona una imagen', 'error');
     setLoading(true);
 
     const formData = new FormData();
@@ -52,11 +37,7 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
     formData.append('imagen', imagen);
 
     try {
-      // Usar la instancia de api configurada
-      const response = await api.post('/reportes', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
+      const response = await api.post('/reportes', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.success) {
         mostrarAlerta('✅ Reporte creado', 'success');
         setModulo('');
@@ -67,8 +48,7 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
         mostrarAlerta(response.data.mensaje, 'error');
       }
     } catch (error) {
-      console.error('Error:', error);
-      mostrarAlerta(error.message || 'Error al crear reporte', 'error');
+      mostrarAlerta('Error al crear reporte', 'error');
     } finally {
       setLoading(false);
     }
@@ -76,39 +56,10 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label>📍 Módulo:</label>
-        <select
-          value={modulo}
-          onChange={(e) => setModulo(e.target.value)}
-          disabled={loading}
-        >
-          <option value="">-- Selecciona --</option>
-          {MODULOS.map((mod) => (
-            <option key={mod} value={mod}>{mod}</option>
-          ))}
-        </select>
-      </div>
-      
-      <div className="form-group">
-        <label>📸 Imagen:</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImagenChange}
-          disabled={loading}
-        />
-      </div>
-
-      {preview && (
-        <div className="preview-container">
-          <img src={preview} alt="Vista previa" />
-        </div>
-      )}
-      
-      <button type="submit" disabled={loading || !modulo}>
-        {loading ? 'Enviando...' : '📤 Enviar Reporte'}
-      </button>
+      <div className="form-group"><label>📍 Módulo:</label><select value={modulo} onChange={(e) => setModulo(e.target.value)} disabled={loading}><option value="">-- Selecciona --</option>{MODULOS.map(mod => <option key={mod} value={mod}>{mod}</option>)}</select></div>
+      <div className="form-group"><label>📸 Imagen:</label><input type="file" accept="image/*" onChange={handleImagenChange} disabled={loading} /></div>
+      {preview && <div className="preview-container"><img src={preview} alt="Vista previa" /></div>}
+      <button type="submit" disabled={loading || !modulo}>{loading ? 'Enviando...' : '📤 Enviar Reporte'}</button>
     </form>
   );
 }

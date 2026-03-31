@@ -13,7 +13,9 @@
       value: 18.18.0
     - key: GEMINI_API_KEY
       sync: false
----
+    - key: FRONTEND_URL
+      value: https://frontend-reportes.onrender.com
+
 # Frontend
 - type: static
   name: frontend-reportes

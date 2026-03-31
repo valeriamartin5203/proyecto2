@@ -1,5 +1,4 @@
 import React from 'react';
-import { FiUser, FiPower, FiServer } from 'react-icons/fi';
 
 function Navbar({ usuario, onLogout, serverStatus }) {
   return (
@@ -10,17 +9,12 @@ function Navbar({ usuario, onLogout, serverStatus }) {
           {serverStatus === 'online' ? '🟢 Online' : '🔴 Offline'}
         </span>
       </div>
-      
-      <div className="navbar-user">
-        {usuario && (
-          <>
-            <FiUser /> {usuario}
-            <button onClick={onLogout} className="logout-btn">
-              <FiPower /> Salir
-            </button>
-          </>
-        )}
-      </div>
+      {usuario && (
+        <div className="navbar-user">
+          👤 {usuario}
+          <button onClick={onLogout} className="logout-btn">🚪 Salir</button>
+        </div>
+      )}
     </nav>
   );
 }

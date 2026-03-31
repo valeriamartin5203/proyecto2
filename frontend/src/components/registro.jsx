@@ -8,22 +8,11 @@ function Registro({ mostrarAlerta, onRegistroExitoso }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!usuario || !password) {
-      mostrarAlerta('Completa todos los campos', 'error');
-      return;
-    }
-
-    if (password.length < 6) {
-      mostrarAlerta('La contraseña debe tener al menos 6 caracteres', 'error');
-      return;
-    }
-
+    if (!usuario || !password) return mostrarAlerta('Completa todos los campos', 'error');
+    if (password.length < 6) return mostrarAlerta('La contraseña debe tener al menos 6 caracteres', 'error');
     setLoading(true);
-
     try {
       const response = await api.post('/registro', { usuario, password });
-
       if (response.data.success) {
         mostrarAlerta('✅ Usuario registrado', 'success');
         setUsuario('');
@@ -33,7 +22,7 @@ function Registro({ mostrarAlerta, onRegistroExitoso }) {
         mostrarAlerta(response.data.mensaje, 'error');
       }
     } catch (error) {
-      mostrarAlerta(error.message || 'Error al registrar', 'error');
+      mostrarAlerta('Error de conexión', 'error');
     } finally {
       setLoading(false);
     }
@@ -41,29 +30,9 @@ function Registro({ mostrarAlerta, onRegistroExitoso }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label>Usuario:</label>
-        <input
-          type="text"
-          value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
-          disabled={loading}
-        />
-      </div>
-      
-      <div className="form-group">
-        <label>Contraseña:</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={loading}
-        />
-      </div>
-      
-      <button type="submit" disabled={loading}>
-        {loading ? 'Registrando...' : 'Registrarse'}
-      </button>
+      <div className="form-group"><label>Usuario:</label><input type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={loading} /></div>
+      <div className="form-group"><label>Contraseña:</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} /></div>
+      <button type="submit" disabled={loading}>{loading ? 'Registrando...' : 'Registrarse'}</button>
     </form>
   );
 }

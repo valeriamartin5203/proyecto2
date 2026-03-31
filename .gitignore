@@ -7,37 +7,21 @@ frontend/node_modules/
 .env
 backend/.env
 frontend/.env
-.env.local
-.env.production
 
 # Builds
 dist/
 build/
-backend/dist/
 frontend/dist/
 
 # Base de datos
 *.db
 *.sqlite
-*.sqlite3
 database.db
-backend/database.db
 
 # Uploads
 uploads/
 backend/uploads/
-frontend/uploads/
-
-# Logs
-*.log
-npm-debug.log*
 
 # Sistema
 .DS_Store
 Thumbs.db
-*.swp
-*.swo
-
-# Editor
-.vscode/
-.idea/

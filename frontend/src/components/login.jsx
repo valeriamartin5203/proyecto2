@@ -8,24 +8,14 @@ function Login({ onLogin, mostrarAlerta }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!usuario || !password) {
-      mostrarAlerta('Completa todos los campos', 'error');
-      return;
-    }
-
+    if (!usuario || !password) return mostrarAlerta('Completa todos los campos', 'error');
     setLoading(true);
-
     try {
       const response = await api.post('/login', { usuario, password });
-
-      if (response.data.success) {
-        onLogin(usuario);
-      } else {
-        mostrarAlerta(response.data.mensaje, 'error');
-      }
+      if (response.data.success) onLogin(usuario);
+      else mostrarAlerta(response.data.mensaje, 'error');
     } catch (error) {
-      mostrarAlerta(error.message || 'Error al conectar', 'error');
+      mostrarAlerta('Error de conexión', 'error');
     } finally {
       setLoading(false);
     }
@@ -33,29 +23,9 @@ function Login({ onLogin, mostrarAlerta }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label>Usuario:</label>
-        <input
-          type="text"
-          value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
-          disabled={loading}
-        />
-      </div>
-      
-      <div className="form-group">
-        <label>Contraseña:</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={loading}
-        />
-      </div>
-      
-      <button type="submit" disabled={loading}>
-        {loading ? 'Conectando...' : 'Iniciar Sesión'}
-      </button>
+      <div className="form-group"><label>Usuario:</label><input type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={loading} /></div>
+      <div className="form-group"><label>Contraseña:</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} /></div>
+      <button type="submit" disabled={loading}>{loading ? 'Conectando...' : 'Iniciar Sesión'}</button>
     </form>
   );
 }
