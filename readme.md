@@ -228,7 +228,9 @@ Laboratorios: laboratorio de ingenieria
 
 ## Enlaces del proyecto
 Frontend en producción   https://frontend-reportes.onrender.com
+
 Backend en producción    https://backend-reportes.onrender.com
+
 Repositorio GitHub       https://github.com/valeriamartin5203/proyecto2
 
 
@@ -257,10 +259,15 @@ El reporte queda registrado y visible para quienes deban resolverlo
 ## Estado del proyecto
 
 ✅ Backend: Funcionando en producción
+
 ✅ Frontend: Funcionando en producción
+
 ✅ IA Gemini: Integrada y funcionando
+
 ✅ Base de datos: SQLite activa
+
 ✅ Autenticación: Registro y login funcional
+
 ✅ Subida de imágenes: Funcional con análisis IA
 
 ---
