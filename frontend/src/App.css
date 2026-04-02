@@ -215,3 +215,76 @@
     height: 20px;
   }
 }
+
+
+/* Estilos para las imágenes de los reportes */
+.reporte-imagen-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.reporte-imagen-container img {
+  transition: transform 0.3s ease;
+  width: 100%;
+  height: auto;
+}
+
+.reporte-imagen-container:hover img {
+  transform: scale(1.02);
+}
+
+.imagen-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: white;
+}
+
+.reporte-imagen-container:hover .imagen-overlay {
+  opacity: 1;
+}
+
+/* Modal de imagen */
+.image-modal .modal-content {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.image-modal .modal-header {
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.image-modal .modal-body {
+  background: #f0f2f5;
+  padding: 0;
+}
+
+.image-modal .modal-body img {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  background: #1a1a2e;
+}
+
+/* Responsive para imágenes */
+@media (max-width: 768px) {
+  .reporte-imagen-container {
+    max-height: 250px;
+  }
+  
+  .reporte-imagen-container img {
+    max-height: 250px;
+    object-fit: cover;
+  }
+}

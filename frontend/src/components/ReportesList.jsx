@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner } from 'react-bootstrap';
-import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Check2, Facebook, Twitter, Envelope } from 'react-bootstrap-icons';
+import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner, Image } from 'react-bootstrap';
+import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Check2, Facebook, Twitter, Envelope, Eye } from 'react-bootstrap-icons';
 import api from '../services/api';
 
 function ReportesList({ reportes, usuarioActual }) {
-  // Estados para likes (ahora desde backend)
+  // Estados para likes
   const [likes, setLikes] = useState({});
   const [liked, setLiked] = useState({});
   const [animating, setAnimating] = useState({});
@@ -17,9 +17,11 @@ function ReportesList({ reportes, usuarioActual }) {
   const [cargandoComentarios, setCargandoComentarios] = useState({});
   const [enviandoComentario, setEnviandoComentario] = useState({});
   
-  // Estados para compartir
+  // Estados para compartir y ver imagen
   const [showShare, setShowShare] = useState({});
   const [copied, setCopied] = useState({});
+  const [showImageModal, setShowImageModal] = useState({});
+  const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
 
   // Cargar likes desde el backend al iniciar
   useEffect(() => {
@@ -31,21 +33,18 @@ function ReportesList({ reportes, usuarioActual }) {
   const cargarTodosLosLikes = async () => {
     setCargandoLikes(true);
     try {
-      // Cargar qué reportes le gustan al usuario
       const response = await api.get(`/api/likes/usuario/${usuarioActual}`);
       const likedReportes = response.data.likedReportes || [];
       
       const likesMap = {};
       const likedMap = {};
       
-      // Para cada reporte, cargar el total de likes
       for (const reporte of reportes) {
         try {
           const likesResponse = await api.get(`/api/likes/${reporte.id}`);
           likesMap[reporte.id] = likesResponse.data.total || 0;
           likedMap[reporte.id] = likedReportes.includes(reporte.id);
         } catch (error) {
-          console.error(`Error cargando likes para reporte ${reporte.id}:`, error);
           likesMap[reporte.id] = 0;
           likedMap[reporte.id] = false;
         }
@@ -80,6 +79,12 @@ function ReportesList({ reportes, usuarioActual }) {
     return colors[categoria] || 'secondary';
   };
 
+  // Obtener URL de la imagen
+  const getImageUrl = (imagen) => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return `${API_URL}/uploads/${imagen}`;
+  };
+
   // ========== FUNCIONES DE LIKES ==========
   const handleLike = async (reporteId) => {
     if (!usuarioActual) {
@@ -87,18 +92,15 @@ function ReportesList({ reportes, usuarioActual }) {
       return;
     }
     
-    // Animación
     setAnimating(prev => ({ ...prev, [reporteId]: true }));
     setTimeout(() => setAnimating(prev => ({ ...prev, [reporteId]: false })), 300);
     
-    // Optimistic update (actualizar UI inmediatamente)
     const newLiked = !liked[reporteId];
     const newTotal = newLiked ? (likes[reporteId] || 0) + 1 : (likes[reporteId] || 0) - 1;
     
     setLiked(prev => ({ ...prev, [reporteId]: newLiked }));
     setLikes(prev => ({ ...prev, [reporteId]: newTotal }));
     
-    // Enviar al backend
     try {
       const response = await api.post('/api/likes/toggle', {
         reporteId: reporteId,
@@ -106,12 +108,10 @@ function ReportesList({ reportes, usuarioActual }) {
       });
       
       if (response.data.success) {
-        // Actualizar con el valor real del backend
         setLiked(prev => ({ ...prev, [reporteId]: response.data.liked }));
         setLikes(prev => ({ ...prev, [reporteId]: response.data.total }));
       }
     } catch (error) {
-      // Si hay error, revertir el optimistic update
       setLiked(prev => ({ ...prev, [reporteId]: !newLiked }));
       setLikes(prev => ({ ...prev, [reporteId]: !newLiked ? newTotal + 1 : newTotal - 1 }));
       console.error('Error al dar like:', error);
@@ -237,6 +237,12 @@ function ReportesList({ reportes, usuarioActual }) {
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
+  // Ver imagen en grande
+  const handleVerImagen = (reporte) => {
+    setImagenSeleccionada(reporte);
+    setShowImageModal(prev => ({ ...prev, [reporte.id]: true }));
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'recientemente';
     const date = new Date(dateString);
@@ -313,6 +319,39 @@ function ReportesList({ reportes, usuarioActual }) {
               </Badge>
             </div>
             <p className="mb-2">{reporte.problema}</p>
+            
+            {/* IMAGEN DEL REPORTE */}
+            {reporte.imagen && (
+              <div className="mt-3 position-relative">
+                <div 
+                  className="reporte-imagen-container rounded-3 overflow-hidden"
+                  style={{ 
+                    cursor: 'pointer',
+                    maxHeight: '400px',
+                    backgroundColor: '#f0f2f5'
+                  }}
+                  onClick={() => handleVerImagen(reporte)}
+                >
+                  <img 
+                    src={getImageUrl(reporte.imagen)}
+                    alt="Evidencia del reporte"
+                    className="img-fluid w-100"
+                    style={{ 
+                      objectFit: 'cover',
+                      maxHeight: '350px',
+                      transition: 'transform 0.3s ease'
+                    }}
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/400x300?text=Imagen+no+disponible';
+                    }}
+                  />
+                  <div className="imagen-overlay">
+                    <Eye size={24} className="text-white" />
+                    <span className="text-white ms-2">Ver imagen completa</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card.Body>
 
           {/* Interacciones */}
@@ -505,6 +544,54 @@ function ReportesList({ reportes, usuarioActual }) {
           </Card.Body>
         </Card>
       ))}
+
+      {/* Modal para ver imagen en grande */}
+      <Modal 
+        show={imagenSeleccionada && showImageModal[imagenSeleccionada?.id]} 
+        onHide={() => {
+          if (imagenSeleccionada) {
+            setShowImageModal(prev => ({ ...prev, [imagenSeleccionada.id]: false }));
+            setImagenSeleccionada(null);
+          }
+        }} 
+        centered 
+        size="lg"
+        className="image-modal"
+      >
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title>
+            <div className="d-flex align-items-center">
+              <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style={{ width: '32px', height: '32px' }}>
+                {imagenSeleccionada?.usuario?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div>
+                <div className="fw-bold">{imagenSeleccionada?.usuario}</div>
+                <small className="text-muted">{imagenSeleccionada?.modulo}</small>
+              </div>
+            </div>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="pt-0 text-center">
+          {imagenSeleccionada && (
+            <>
+              <img 
+                src={getImageUrl(imagenSeleccionada.imagen)}
+                alt="Evidencia del reporte"
+                className="img-fluid rounded-3"
+                style={{ maxHeight: '70vh', objectFit: 'contain' }}
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/800x600?text=Imagen+no+disponible';
+                }}
+              />
+              <div className="mt-3 text-start">
+                <p className="mb-0"><strong>Problema:</strong> {imagenSeleccionada.problema}</p>
+                <p className="mb-0"><strong>Urgencia:</strong> {imagenSeleccionada.urgencia}</p>
+                <p className="mb-0"><strong>Categoría:</strong> {imagenSeleccionada.categoria}</p>
+              </div>
+            </>
+          )}
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }
