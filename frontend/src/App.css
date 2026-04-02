@@ -1,63 +1,133 @@
-/* Estilos adicionales para Bootstrap responsive */
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* Estilos para animaciones de likes */
+.like-button {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  padding: 6px 12px;
 }
 
-/* Ajustes para pantallas pequeñas */
-@media (max-width: 768px) {
-  .display-4 {
-    font-size: 2rem;
+.like-button:hover {
+  background-color: #f0f2f5;
+}
+
+.like-button.liked {
+  color: #1877f2 !important;
+}
+
+/* Animación del like (pop) */
+@keyframes likeAnimation {
+  0% {
+    transform: scale(1);
   }
-  
-  .lead {
-    font-size: 1rem;
+  50% {
+    transform: scale(1.3);
   }
-  
-  .navbar-brand {
-    font-size: 1.2rem;
-  }
-  
-  .card-title {
-    font-size: 1.2rem;
+  100% {
+    transform: scale(1);
   }
 }
 
-/* Ajustes para pantallas muy pequeñas */
+.animate-like {
+  animation: likeAnimation 0.3s ease;
+}
+
+/* Corazón animado al dar like */
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.3);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.like-button.liked .like-icon {
+  animation: heartBeat 0.5s ease;
+}
+
+/* Efecto de confeti para likes múltiples */
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: #ff0000;
+  animation: confetti 1s ease-out forwards;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Tarjeta de reporte al hover */
+.reporte-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reporte-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Estilo para el contador de likes */
+.like-count {
+  font-size: 0.85rem;
+  color: #65676b;
+  transition: color 0.2s ease;
+}
+
+.like-count.liked {
+  color: #1877f2;
+}
+
+/* Botón de like con efecto de ondas */
+.like-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.like-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(24, 119, 242, 0.2) 0%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+.like-button:active::after {
+  transform: translate(-50%, -50%) scale(2);
+}
+
+/* Responsive para móvil */
 @media (max-width: 576px) {
-  .display-4 {
-    font-size: 1.5rem;
+  .like-button span {
+    font-size: 0.85rem;
   }
   
-  .navbar-brand {
-    font-size: 1rem;
+  .like-button svg {
+    width: 16px;
+    height: 16px;
   }
-  
-  .btn {
-    font-size: 0.8rem;
-    padding: 0.5rem 1rem;
-  }
-  
-  .form-control, .form-select {
-    font-size: 0.9rem;
-    padding: 0.5rem;
-  }
-}
-
-/* Scrollbar personalizada para lista de reportes */
-.reportes-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.reportes-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-.reportes-list::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 10px;
-}
-
-.reportes-list::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
 }
