@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner } from 'react-bootstrap';
-import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, X, Link45deg, Check2, Facebook, Twitter, Envelope } from 'react-bootstrap-icons';
+import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Check2, Facebook, Twitter, Envelope } from 'react-bootstrap-icons';
 import api from '../services/api';
 
-function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
-  // Estados para likes
+function ReportesList({ reportes, usuarioActual }) {
+  // Estados para likes (ahora desde backend)
   const [likes, setLikes] = useState({});
   const [liked, setLiked] = useState({});
   const [animating, setAnimating] = useState({});
+  const [cargandoLikes, setCargandoLikes] = useState(true);
   
   // Estados para comentarios
   const [showComments, setShowComments] = useState({});
@@ -20,19 +21,44 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
   const [showShare, setShowShare] = useState({});
   const [copied, setCopied] = useState({});
 
-  // Cargar likes desde localStorage
+  // Cargar likes desde el backend al iniciar
   useEffect(() => {
-    const savedLikes = localStorage.getItem('reportesLikes');
-    const savedLiked = localStorage.getItem('reportesLiked');
-    if (savedLikes) setLikes(JSON.parse(savedLikes));
-    if (savedLiked) setLiked(JSON.parse(savedLiked));
-  }, []);
+    if (usuarioActual && reportes.length > 0) {
+      cargarTodosLosLikes();
+    }
+  }, [usuarioActual, reportes]);
 
-  // Guardar likes en localStorage
-  useEffect(() => {
-    localStorage.setItem('reportesLikes', JSON.stringify(likes));
-    localStorage.setItem('reportesLiked', JSON.stringify(liked));
-  }, [likes, liked]);
+  const cargarTodosLosLikes = async () => {
+    setCargandoLikes(true);
+    try {
+      // Cargar qué reportes le gustan al usuario
+      const response = await api.get(`/api/likes/usuario/${usuarioActual}`);
+      const likedReportes = response.data.likedReportes || [];
+      
+      const likesMap = {};
+      const likedMap = {};
+      
+      // Para cada reporte, cargar el total de likes
+      for (const reporte of reportes) {
+        try {
+          const likesResponse = await api.get(`/api/likes/${reporte.id}`);
+          likesMap[reporte.id] = likesResponse.data.total || 0;
+          likedMap[reporte.id] = likedReportes.includes(reporte.id);
+        } catch (error) {
+          console.error(`Error cargando likes para reporte ${reporte.id}:`, error);
+          likesMap[reporte.id] = 0;
+          likedMap[reporte.id] = false;
+        }
+      }
+      
+      setLikes(likesMap);
+      setLiked(likedMap);
+    } catch (error) {
+      console.error('Error cargando likes:', error);
+    } finally {
+      setCargandoLikes(false);
+    }
+  };
 
   const getBadgeVariant = (urgencia) => {
     switch(urgencia?.toLowerCase()) {
@@ -55,16 +81,40 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
   };
 
   // ========== FUNCIONES DE LIKES ==========
-  const handleLike = (id) => {
-    setAnimating(prev => ({ ...prev, [id]: true }));
-    setTimeout(() => setAnimating(prev => ({ ...prev, [id]: false })), 300);
-
-    if (liked[id]) {
-      setLikes(prev => ({ ...prev, [id]: (prev[id] || 0) - 1 }));
-      setLiked(prev => ({ ...prev, [id]: false }));
-    } else {
-      setLikes(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-      setLiked(prev => ({ ...prev, [id]: true }));
+  const handleLike = async (reporteId) => {
+    if (!usuarioActual) {
+      alert('Inicia sesión para dar like');
+      return;
+    }
+    
+    // Animación
+    setAnimating(prev => ({ ...prev, [reporteId]: true }));
+    setTimeout(() => setAnimating(prev => ({ ...prev, [reporteId]: false })), 300);
+    
+    // Optimistic update (actualizar UI inmediatamente)
+    const newLiked = !liked[reporteId];
+    const newTotal = newLiked ? (likes[reporteId] || 0) + 1 : (likes[reporteId] || 0) - 1;
+    
+    setLiked(prev => ({ ...prev, [reporteId]: newLiked }));
+    setLikes(prev => ({ ...prev, [reporteId]: newTotal }));
+    
+    // Enviar al backend
+    try {
+      const response = await api.post('/api/likes/toggle', {
+        reporteId: reporteId,
+        usuario: usuarioActual
+      });
+      
+      if (response.data.success) {
+        // Actualizar con el valor real del backend
+        setLiked(prev => ({ ...prev, [reporteId]: response.data.liked }));
+        setLikes(prev => ({ ...prev, [reporteId]: response.data.total }));
+      }
+    } catch (error) {
+      // Si hay error, revertir el optimistic update
+      setLiked(prev => ({ ...prev, [reporteId]: !newLiked }));
+      setLikes(prev => ({ ...prev, [reporteId]: !newLiked ? newTotal + 1 : newTotal - 1 }));
+      console.error('Error al dar like:', error);
     }
   };
 
@@ -86,7 +136,7 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
     
     setCargandoComentarios(prev => ({ ...prev, [reporteId]: true }));
     try {
-      const response = await api.get(`/reportes/${reporteId}/comentarios`);
+      const response = await api.get(`/api/comentarios/${reporteId}`);
       setComentarios(prev => ({ ...prev, [reporteId]: response.data || [] }));
     } catch (error) {
       console.error('Error cargando comentarios:', error);
@@ -109,16 +159,21 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
     const texto = nuevoComentario[reporteId];
     if (!texto?.trim()) return;
     
+    if (!usuarioActual) {
+      alert('Debes iniciar sesión para comentar');
+      return;
+    }
+    
     setEnviandoComentario(prev => ({ ...prev, [reporteId]: true }));
     
     try {
-      const response = await api.post(`/reportes/${reporteId}/comentarios`, {
-        usuario: usuarioActual || localStorage.getItem('usuario') || 'Usuario',
+      const response = await api.post('/api/comentarios', {
+        reporteId: reporteId,
+        usuario: usuarioActual,
         texto: texto.trim()
       });
       
       if (response.data.success) {
-        // Agregar comentario a la lista
         setComentarios(prev => ({
           ...prev,
           [reporteId]: [response.data.comentario, ...(prev[reporteId] || [])]
@@ -134,8 +189,7 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
 
   const handleLikeComentario = async (comentarioId) => {
     try {
-      await api.post(`/comentarios/${comentarioId}/like`);
-      // Actualizar UI
+      await api.post(`/api/comentarios/${comentarioId}/like`);
       setComentarios(prev => {
         const newComentarios = { ...prev };
         for (const reporteId in newComentarios) {
@@ -146,7 +200,7 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
         return newComentarios;
       });
     } catch (error) {
-      console.error('Error al dar like:', error);
+      console.error('Error al dar like a comentario:', error);
     }
   };
 
@@ -184,6 +238,7 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'recientemente';
     const date = new Date(dateString);
     const now = new Date();
     const diff = Math.floor((now - date) / 1000 / 60);
@@ -193,6 +248,15 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
     if (diff < 1440) return `hace ${Math.floor(diff / 60)} horas`;
     return date.toLocaleDateString();
   };
+
+  if (cargandoLikes && reportes.length > 0) {
+    return (
+      <div className="text-center py-5">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-3 text-muted">Cargando interacciones...</p>
+      </div>
+    );
+  }
 
   if (!reportes || reportes.length === 0) {
     return (
@@ -255,7 +319,11 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
           <Card.Body className="pt-0 pb-2 border-top">
             <div className="d-flex justify-content-between align-items-center small text-muted mb-2">
               <div className="d-flex align-items-center gap-3">
-                <div className="d-flex align-items-center gap-1">
+                <div 
+                  className="d-flex align-items-center gap-1" 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleLike(reporte.id)}
+                >
                   {liked[reporte.id] ? (
                     <HeartFill className="text-danger" size={14} />
                   ) : (
@@ -314,6 +382,7 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
                   {cargandoComentarios[reporte.id] ? (
                     <div className="text-center py-3">
                       <Spinner animation="border" size="sm" />
+                      <p className="mt-2 small">Cargando comentarios...</p>
                     </div>
                   ) : comentarios[reporte.id]?.length === 0 ? (
                     <div className="text-center text-muted py-3 small">
@@ -354,18 +423,18 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
                 <InputGroup>
                   <Form.Control
                     type="text"
-                    placeholder="Escribe un comentario..."
+                    placeholder={usuarioActual ? "Escribe un comentario..." : "Inicia sesión para comentar"}
                     value={nuevoComentario[reporte.id] || ''}
                     onChange={(e) => setNuevoComentario(prev => ({ ...prev, [reporte.id]: e.target.value }))}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddComentario(reporte.id)}
+                    onKeyPress={(e) => e.key === 'Enter' && usuarioActual && handleAddComentario(reporte.id)}
                     className="rounded-pill bg-light border-0"
-                    disabled={!usuarioActual && !localStorage.getItem('usuario')}
+                    disabled={!usuarioActual}
                   />
                   <Button 
                     variant="primary" 
                     className="rounded-pill"
                     onClick={() => handleAddComentario(reporte.id)}
-                    disabled={enviandoComentario[reporte.id] || !nuevoComentario[reporte.id]?.trim() || (!usuarioActual && !localStorage.getItem('usuario'))}
+                    disabled={enviandoComentario[reporte.id] || !nuevoComentario[reporte.id]?.trim() || !usuarioActual}
                   >
                     {enviandoComentario[reporte.id] ? (
                       <Spinner animation="border" size="sm" />
@@ -374,9 +443,6 @@ function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
                     )}
                   </Button>
                 </InputGroup>
-                {(!usuarioActual && !localStorage.getItem('usuario')) && (
-                  <small className="text-muted mt-1 d-block">Inicia sesión para comentar</small>
-                )}
               </div>
             )}
 

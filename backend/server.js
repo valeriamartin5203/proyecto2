@@ -188,6 +188,7 @@ app.use("/uploads", express.static(uploadDir));
 // ========== COMENTARIOS ==========
 
 // Tabla de comentarios
+// ========== TABLA DE COMENTARIOS ==========
 db.run(`
     CREATE TABLE IF NOT EXISTS comentarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,18 +197,24 @@ db.run(`
         texto TEXT NOT NULL,
         fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
         likes INTEGER DEFAULT 0,
-        FOREIGN KEY (reporte_id) REFERENCES reportes(id)
+        FOREIGN KEY (reporte_id) REFERENCES reportes(id) ON DELETE CASCADE
     )
-`);
+`, (err) => {
+    if (err) console.error("Error creando tabla comentarios:", err);
+    else console.log("✅ Tabla 'comentarios' lista");
+});
+
+// ========== RUTAS DE COMENTARIOS ==========
 
 // Obtener comentarios de un reporte
-app.get("/reportes/:id/comentarios", (req, res) => {
-    const { id } = req.params;
+app.get("/api/comentarios/:reporteId", (req, res) => {
+    const { reporteId } = req.params;
     db.all(
         "SELECT * FROM comentarios WHERE reporte_id = ? ORDER BY fecha DESC",
-        [id],
+        [reporteId],
         (err, rows) => {
             if (err) {
+                console.error("Error al obtener comentarios:", err);
                 return res.status(500).json({ mensaje: "Error al obtener comentarios", success: false });
             }
             res.json(rows || []);
@@ -216,19 +223,19 @@ app.get("/reportes/:id/comentarios", (req, res) => {
 });
 
 // Agregar comentario
-app.post("/reportes/:id/comentarios", (req, res) => {
-    const { id } = req.params;
-    const { usuario, texto } = req.body;
+app.post("/api/comentarios", (req, res) => {
+    const { reporteId, usuario, texto } = req.body;
 
-    if (!usuario || !texto) {
-        return res.status(400).json({ mensaje: "Usuario y texto son requeridos", success: false });
+    if (!reporteId || !usuario || !texto) {
+        return res.status(400).json({ mensaje: "Faltan datos", success: false });
     }
 
     db.run(
         "INSERT INTO comentarios (reporte_id, usuario, texto) VALUES (?, ?, ?)",
-        [id, usuario, texto],
+        [reporteId, usuario, texto],
         function(err) {
             if (err) {
+                console.error("Error al guardar comentario:", err);
                 return res.status(500).json({ mensaje: "Error al guardar comentario", success: false });
             }
             res.json({
@@ -236,7 +243,7 @@ app.post("/reportes/:id/comentarios", (req, res) => {
                 success: true,
                 comentario: {
                     id: this.lastID,
-                    reporte_id: id,
+                    reporte_id: reporteId,
                     usuario,
                     texto,
                     fecha: new Date().toISOString(),
@@ -248,13 +255,14 @@ app.post("/reportes/:id/comentarios", (req, res) => {
 });
 
 // Dar like a un comentario
-app.post("/comentarios/:id/like", (req, res) => {
+app.post("/api/comentarios/:id/like", (req, res) => {
     const { id } = req.params;
     db.run(
         "UPDATE comentarios SET likes = likes + 1 WHERE id = ?",
         [id],
         function(err) {
             if (err) {
+                console.error("Error al dar like:", err);
                 return res.status(500).json({ mensaje: "Error al dar like", success: false });
             }
             res.json({ mensaje: "Like agregado", success: true });
@@ -262,15 +270,138 @@ app.post("/comentarios/:id/like", (req, res) => {
     );
 });
 
-// Eliminar comentario
-app.delete("/comentarios/:id", (req, res) => {
-    const { id } = req.params;
-    db.run("DELETE FROM comentarios WHERE id = ?", [id], function(err) {
-        if (err) {
-            return res.status(500).json({ mensaje: "Error al eliminar comentario", success: false });
+
+// ========== TABLA DE LIKES ==========
+db.run(`
+    CREATE TABLE IF NOT EXISTS reportes_likes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reporte_id INTEGER NOT NULL,
+        usuario TEXT NOT NULL,
+        fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(reporte_id, usuario),
+        FOREIGN KEY (reporte_id) REFERENCES reportes(id) ON DELETE CASCADE
+    )
+`, (err) => {
+    if (err) console.error("Error creando tabla likes:", err);
+    else console.log("✅ Tabla 'reportes_likes' lista");
+});
+
+// ========== RUTAS DE LIKES ==========
+
+// Obtener likes de un reporte
+app.get("/api/likes/:reporteId", (req, res) => {
+    const { reporteId } = req.params;
+    db.get(
+        "SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?",
+        [reporteId],
+        (err, row) => {
+            if (err) {
+                return res.status(500).json({ mensaje: "Error al obtener likes", success: false });
+            }
+            res.json({ total: row?.total || 0 });
         }
-        res.json({ mensaje: "Comentario eliminado", success: true });
-    });
+    );
+});
+
+// Verificar si un usuario ya dio like
+app.get("/api/likes/:reporteId/:usuario", (req, res) => {
+    const { reporteId, usuario } = req.params;
+    db.get(
+        "SELECT * FROM reportes_likes WHERE reporte_id = ? AND usuario = ?",
+        [reporteId, usuario],
+        (err, row) => {
+            if (err) {
+                return res.status(500).json({ mensaje: "Error al verificar like", success: false });
+            }
+            res.json({ liked: !!row });
+        }
+    );
+});
+
+// Dar o quitar like
+app.post("/api/likes/toggle", (req, res) => {
+    const { reporteId, usuario } = req.body;
+
+    if (!reporteId || !usuario) {
+        return res.status(400).json({ mensaje: "Faltan datos", success: false });
+    }
+
+    // Verificar si ya existe el like
+    db.get(
+        "SELECT * FROM reportes_likes WHERE reporte_id = ? AND usuario = ?",
+        [reporteId, usuario],
+        (err, row) => {
+            if (err) {
+                return res.status(500).json({ mensaje: "Error al verificar like", success: false });
+            }
+
+            if (row) {
+                // Si ya existe, eliminar like (quitar like)
+                db.run(
+                    "DELETE FROM reportes_likes WHERE reporte_id = ? AND usuario = ?",
+                    [reporteId, usuario],
+                    function(err) {
+                        if (err) {
+                            return res.status(500).json({ mensaje: "Error al quitar like", success: false });
+                        }
+                        // Obtener el nuevo total
+                        db.get(
+                            "SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?",
+                            [reporteId],
+                            (err, countRow) => {
+                                res.json({
+                                    mensaje: "Like eliminado",
+                                    success: true,
+                                    liked: false,
+                                    total: countRow?.total || 0
+                                });
+                            }
+                        );
+                    }
+                );
+            } else {
+                // Si no existe, agregar like
+                db.run(
+                    "INSERT INTO reportes_likes (reporte_id, usuario) VALUES (?, ?)",
+                    [reporteId, usuario],
+                    function(err) {
+                        if (err) {
+                            return res.status(500).json({ mensaje: "Error al dar like", success: false });
+                        }
+                        // Obtener el nuevo total
+                        db.get(
+                            "SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?",
+                            [reporteId],
+                            (err, countRow) => {
+                                res.json({
+                                    mensaje: "Like agregado",
+                                    success: true,
+                                    liked: true,
+                                    total: countRow?.total || 0
+                                });
+                            }
+                        );
+                    }
+                );
+            }
+        }
+    );
+});
+
+// Obtener todos los likes del usuario (para cargar al iniciar)
+app.get("/api/likes/usuario/:usuario", (req, res) => {
+    const { usuario } = req.params;
+    db.all(
+        "SELECT reporte_id FROM reportes_likes WHERE usuario = ?",
+        [usuario],
+        (err, rows) => {
+            if (err) {
+                return res.status(500).json({ mensaje: "Error al obtener likes del usuario", success: false });
+            }
+            const likedReportes = rows.map(row => row.reporte_id);
+            res.json({ likedReportes });
+        }
+    );
 });
 
 const PORT = process.env.PORT || 10000;
