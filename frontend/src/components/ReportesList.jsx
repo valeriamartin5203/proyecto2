@@ -1,32 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Badge, Dropdown, Button } from 'react-bootstrap';
-import { Person, Chat, Share, ThreeDots, Heart, HeartFill } from 'react-bootstrap-icons';
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup } from 'react-bootstrap';
+import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, X, Link45deg, Check2, Facebook, Twitter, Envelope } from 'react-bootstrap-icons';
 import Confetti from './Confetti';
 
-function ReportesList({ reportes }) {
+function ReportesList({ reportes, onReporteActualizado }) {
   const [likes, setLikes] = useState({});
   const [liked, setLiked] = useState({});
   const [animating, setAnimating] = useState({});
   const [showConfetti, setShowConfetti] = useState({});
   const [consecutiveLikes, setConsecutiveLikes] = useState({});
+  
+  // Estados para comentarios
+  const [showComments, setShowComments] = useState({});
+  const [comentarios, setComentarios] = useState({});
+  const [nuevoComentario, setNuevoComentario] = useState({});
+  const [comentarioEnviando, setComentarioEnviando] = useState({});
+  
+  // Estados para compartir
+  const [showShare, setShowShare] = useState({});
+  const [copied, setCopied] = useState({});
+  const [shareUrl, setShareUrl] = useState('');
 
-  // Cargar likes desde localStorage al iniciar
+  // Cargar datos desde localStorage
   useEffect(() => {
+    // Cargar likes
     const savedLikes = localStorage.getItem('reportesLikes');
-    if (savedLikes) {
-      setLikes(JSON.parse(savedLikes));
-    }
+    if (savedLikes) setLikes(JSON.parse(savedLikes));
     const savedLiked = localStorage.getItem('reportesLiked');
-    if (savedLiked) {
-      setLiked(JSON.parse(savedLiked));
-    }
+    if (savedLiked) setLiked(JSON.parse(savedLiked));
+    
+    // Cargar comentarios
+    const savedComentarios = localStorage.getItem('reportesComentarios');
+    if (savedComentarios) setComentarios(JSON.parse(savedComentarios));
   }, []);
 
-  // Guardar likes en localStorage cuando cambien
+  // Guardar datos en localStorage
   useEffect(() => {
     localStorage.setItem('reportesLikes', JSON.stringify(likes));
     localStorage.setItem('reportesLiked', JSON.stringify(liked));
-  }, [likes, liked]);
+    localStorage.setItem('reportesComentarios', JSON.stringify(comentarios));
+  }, [likes, liked, comentarios]);
+
+  // Obtener URL para compartir
+  useEffect(() => {
+    setShareUrl(window.location.href);
+  }, []);
 
   const getBadgeVariant = (urgencia) => {
     switch(urgencia?.toLowerCase()) {
@@ -48,36 +66,30 @@ function ReportesList({ reportes }) {
     return colors[categoria] || 'secondary';
   };
 
+  // ========== FUNCIONES DE LIKES ==========
   const handleLike = (id) => {
-    // Contar likes consecutivos para confeti
     const newCount = (consecutiveLikes[id] || 0) + 1;
     setConsecutiveLikes(prev => ({ ...prev, [id]: newCount }));
     
-    // Mostrar confeti cada 5 likes consecutivos o en el primer like
     if (newCount % 5 === 0 && !liked[id]) {
       setShowConfetti(prev => ({ ...prev, [id]: true }));
       setTimeout(() => setShowConfetti(prev => ({ ...prev, [id]: false })), 1000);
     }
     
-    // Animación de "pop"
     setAnimating(prev => ({ ...prev, [id]: true }));
     setTimeout(() => setAnimating(prev => ({ ...prev, [id]: false })), 300);
 
     if (liked[id]) {
-      // Quitar like
       setLikes(prev => ({ ...prev, [id]: (prev[id] || 0) - 1 }));
       setLiked(prev => ({ ...prev, [id]: false }));
     } else {
-      // Agregar like
       setLikes(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
       setLiked(prev => ({ ...prev, [id]: true }));
     }
   };
 
   const getLikeIcon = (id) => {
-    if (liked[id]) {
-      return <HeartFill className="text-danger" size={18} />;
-    }
+    if (liked[id]) return <HeartFill className="text-danger" size={18} />;
     return <Heart size={18} />;
   };
 
@@ -86,6 +98,100 @@ function ReportesList({ reportes }) {
     if (count === 0) return "Me gusta";
     if (count === 1) return "1 persona le gusta esto";
     return `${count} personas les gusta esto`;
+  };
+
+  // ========== FUNCIONES DE COMENTARIOS ==========
+  const handleToggleComments = (id) => {
+    setShowComments(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleAddComentario = async (id) => {
+    if (!nuevoComentario[id]?.trim()) return;
+    
+    setComentarioEnviando(prev => ({ ...prev, [id]: true }));
+    
+    // Simular delay de red
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const nuevoComentarioObj = {
+      id: Date.now(),
+      usuario: localStorage.getItem('usuario') || 'Usuario',
+      texto: nuevoComentario[id],
+      fecha: new Date().toISOString(),
+      likes: 0
+    };
+    
+    setComentarios(prev => ({
+      ...prev,
+      [id]: [...(prev[id] || []), nuevoComentarioObj]
+    }));
+    
+    setNuevoComentario(prev => ({ ...prev, [id]: '' }));
+    setComentarioEnviando(prev => ({ ...prev, [id]: false }));
+  };
+
+  const handleLikeComentario = (reporteId, comentarioId) => {
+    setComentarios(prev => ({
+      ...prev,
+      [reporteId]: prev[reporteId]?.map(com => 
+        com.id === comentarioId 
+          ? { ...com, likes: (com.likes || 0) + 1 }
+          : com
+      )
+    }));
+  };
+
+  const getComentariosCount = (id) => {
+    return comentarios[id]?.length || 0;
+  };
+
+  // ========== FUNCIONES DE COMPARTIR ==========
+  const handleToggleShare = (id) => {
+    setShowShare(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleCopyLink = async (id) => {
+    const reporte = reportes.find(r => r.id === id);
+    const link = `${window.location.origin}/reporte/${id}`;
+    
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => setCopied(prev => ({ ...prev, [id]: false })), 2000);
+    } catch (err) {
+      console.error('Error al copiar:', err);
+    }
+  };
+
+  const handleShareToFacebook = (id) => {
+    const url = `${window.location.origin}/reporte/${id}`;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const handleShareToTwitter = (id) => {
+    const reporte = reportes.find(r => r.id === id);
+    const text = encodeURIComponent(`📸 Reporte: ${reporte?.problema.substring(0, 100)}`);
+    const url = `${window.location.origin}/reporte/${id}`;
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const handleShareToEmail = (id) => {
+    const reporte = reportes.find(r => r.id === id);
+    const subject = encodeURIComponent(`Reporte #${id} - Sistema de Reportes IA`);
+    const body = encodeURIComponent(`Hola,\n\nTe comparto este reporte:\n\nProblema: ${reporte?.problema}\nUbicación: ${reporte?.modulo}\nUrgencia: ${reporte?.urgencia}\n\nVer más en: ${window.location.origin}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  // Formatear fecha
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000 / 60);
+    
+    if (diff < 1) return 'ahora mismo';
+    if (diff < 60) return `hace ${diff} minutos`;
+    if (diff < 1440) return `hace ${Math.floor(diff / 60)} horas`;
+    return date.toLocaleDateString();
   };
 
   if (!reportes || reportes.length === 0) {
@@ -102,7 +208,6 @@ function ReportesList({ reportes }) {
     <div>
       {reportes.map((reporte) => (
         <Card key={reporte.id} className="border-0 shadow-sm rounded-3 mb-4 reporte-card">
-          {/* Confetti */}
           <Confetti active={showConfetti[reporte.id]} onComplete={() => setShowConfetti(prev => ({ ...prev, [reporte.id]: false }))} />
           
           {/* Header del reporte */}
@@ -148,22 +253,31 @@ function ReportesList({ reportes }) {
             <p className="mb-2">{reporte.problema}</p>
           </Card.Body>
 
-          {/* Interacciones estilo Facebook */}
+          {/* Interacciones */}
           <Card.Body className="pt-0 pb-2 border-top">
             <div className="d-flex justify-content-between align-items-center small text-muted mb-2">
-              <div className="d-flex align-items-center gap-1">
-                <div className="d-flex align-items-center">
+              <div className="d-flex align-items-center gap-3">
+                <div className="d-flex align-items-center gap-1">
                   {liked[reporte.id] ? (
                     <HeartFill className="text-danger" size={14} />
                   ) : (
                     <Heart size={14} className="text-muted" />
                   )}
-                  <span className="ms-1">{getLikeText(reporte.id)}</span>
+                  <span>{getLikeText(reporte.id)}</span>
                 </div>
+                <div 
+                  className="d-flex align-items-center gap-1" 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleToggleComments(reporte.id)}
+                >
+                  <Chat size={14} />
+                  <span>{getComentariosCount(reporte.id)} comentarios</span>
+                </div>
+                <div>0 veces compartido</div>
               </div>
-              <div>0 comentarios • 0 veces compartido</div>
             </div>
             
+            {/* Botones de acción */}
             <div className="d-flex justify-content-around pt-2 border-top">
               <Button 
                 variant="link" 
@@ -178,14 +292,146 @@ function ReportesList({ reportes }) {
                 </span>
               </Button>
               
-              <Button variant="link" className="text-muted text-decoration-none d-flex align-items-center gap-2">
+              <Button 
+                variant="link" 
+                className="text-muted text-decoration-none d-flex align-items-center gap-2"
+                onClick={() => handleToggleComments(reporte.id)}
+              >
                 <Chat size={18} /> Comentar
               </Button>
               
-              <Button variant="link" className="text-muted text-decoration-none d-flex align-items-center gap-2">
+              <Button 
+                variant="link" 
+                className="text-muted text-decoration-none d-flex align-items-center gap-2"
+                onClick={() => handleToggleShare(reporte.id)}
+              >
                 <Share size={18} /> Compartir
               </Button>
             </div>
+
+            {/* Sección de comentarios */}
+            {showComments[reporte.id] && (
+              <div className="mt-3 pt-2 border-top">
+                {/* Lista de comentarios */}
+                <div className="mb-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {comentarios[reporte.id]?.length === 0 && (
+                    <div className="text-center text-muted py-3 small">
+                      No hay comentarios aún. ¡Sé el primero en comentar!
+                    </div>
+                  )}
+                  {comentarios[reporte.id]?.map((com) => (
+                    <div key={com.id} className="d-flex mb-3">
+                      <div className="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                        {com.usuario?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      <div className="bg-light rounded-3 p-2 flex-grow-1">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <span className="fw-bold small">{com.usuario}</span>
+                          <small className="text-muted">{formatDate(com.fecha)}</small>
+                        </div>
+                        <p className="small mb-1">{com.texto}</p>
+                        <div className="d-flex gap-2">
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            className="text-muted text-decoration-none p-0 small"
+                            onClick={() => handleLikeComentario(reporte.id, com.id)}
+                          >
+                            {com.likes > 0 ? `❤️ ${com.likes}` : '❤️ Me gusta'}
+                          </Button>
+                          <Button variant="link" size="sm" className="text-muted text-decoration-none p-0 small">
+                            Responder
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Input para nuevo comentario */}
+                <InputGroup>
+                  <Form.Control
+                    type="text"
+                    placeholder="Escribe un comentario..."
+                    value={nuevoComentario[reporte.id] || ''}
+                    onChange={(e) => setNuevoComentario(prev => ({ ...prev, [reporte.id]: e.target.value }))}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddComentario(reporte.id)}
+                    className="rounded-pill bg-light border-0"
+                  />
+                  <Button 
+                    variant="primary" 
+                    className="rounded-pill"
+                    onClick={() => handleAddComentario(reporte.id)}
+                    disabled={comentarioEnviando[reporte.id] || !nuevoComentario[reporte.id]?.trim()}
+                  >
+                    {comentarioEnviando[reporte.id] ? (
+                      <span className="spinner-border spinner-border-sm" />
+                    ) : (
+                      <Send size={16} />
+                    )}
+                  </Button>
+                </InputGroup>
+              </div>
+            )}
+
+            {/* Modal para compartir */}
+            <Modal show={showShare[reporte.id]} onHide={() => handleToggleShare(reporte.id)} centered>
+              <Modal.Header closeButton className="border-0 pb-0">
+                <Modal.Title>Compartir reporte</Modal.Title>
+              </Modal.Header>
+              <Modal.Body className="pt-0">
+                <p className="text-muted small mb-3">Comparte este reporte con otras personas</p>
+                
+                {/* Opciones de compartir */}
+                <div className="d-flex gap-3 mb-4 justify-content-center">
+                  <Button 
+                    variant="primary" 
+                    className="rounded-circle d-flex align-items-center justify-content-center"
+                    style={{ width: '48px', height: '48px' }}
+                    onClick={() => handleShareToFacebook(reporte.id)}
+                  >
+                    <Facebook size={24} />
+                  </Button>
+                  <Button 
+                    variant="info" 
+                    className="rounded-circle d-flex align-items-center justify-content-center text-white"
+                    style={{ width: '48px', height: '48px' }}
+                    onClick={() => handleShareToTwitter(reporte.id)}
+                  >
+                    <Twitter size={24} />
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className="rounded-circle d-flex align-items-center justify-content-center"
+                    style={{ width: '48px', height: '48px' }}
+                    onClick={() => handleShareToEmail(reporte.id)}
+                  >
+                    <Envelope size={24} />
+                  </Button>
+                </div>
+
+                {/* Copiar enlace */}
+                <div className="border rounded-3 p-2 bg-light">
+                  <div className="d-flex align-items-center gap-2">
+                    <Link45deg className="text-muted" />
+                    <Form.Control 
+                      type="text" 
+                      value={`${window.location.origin}/reporte/${reporte.id}`}
+                      readOnly
+                      size="sm"
+                      className="bg-light border-0 small"
+                    />
+                    <Button 
+                      variant={copied[reporte.id] ? 'success' : 'outline-secondary'}
+                      size="sm"
+                      onClick={() => handleCopyLink(reporte.id)}
+                    >
+                      {copied[reporte.id] ? <Check2 size={14} /> : 'Copiar'}
+                    </Button>
+                  </div>
+                </div>
+              </Modal.Body>
+            </Modal>
           </Card.Body>
         </Card>
       ))}

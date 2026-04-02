@@ -131,3 +131,87 @@
     height: 16px;
   }
 }
+
+/* Estilos para comentarios y compartir */
+
+/* Animación de comentarios */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.comments-section {
+  animation: slideDown 0.3s ease;
+}
+
+/* Estilo para el modal de compartir */
+.share-modal .modal-content {
+  border-radius: 20px;
+}
+
+/* Botones de compartir */
+.btn-share {
+  transition: transform 0.2s ease;
+}
+
+.btn-share:hover {
+  transform: scale(1.1);
+}
+
+/* Input de comentario */
+.comment-input:focus {
+  box-shadow: none;
+  border-color: #1877f2;
+}
+
+/* Estilo para comentarios */
+.comment-item {
+  transition: background-color 0.2s ease;
+}
+
+.comment-item:hover {
+  background-color: #f8f9fa;
+}
+
+/* Scrollbar para comentarios */
+.comments-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.comments-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+/* Animación de like en comentarios */
+.comment-like {
+  transition: all 0.2s ease;
+}
+
+.comment-like:hover {
+  color: #1877f2 !important;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .share-buttons .btn {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .share-buttons svg {
+    width: 20px;
+    height: 20px;
+  }
+}
