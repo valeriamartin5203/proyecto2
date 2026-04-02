@@ -185,6 +185,94 @@ app.get("/reportes", (req, res) => {
 
 app.use("/uploads", express.static(uploadDir));
 
+// ========== COMENTARIOS ==========
+
+// Tabla de comentarios
+db.run(`
+    CREATE TABLE IF NOT EXISTS comentarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reporte_id INTEGER NOT NULL,
+        usuario TEXT NOT NULL,
+        texto TEXT NOT NULL,
+        fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+        likes INTEGER DEFAULT 0,
+        FOREIGN KEY (reporte_id) REFERENCES reportes(id)
+    )
+`);
+
+// Obtener comentarios de un reporte
+app.get("/reportes/:id/comentarios", (req, res) => {
+    const { id } = req.params;
+    db.all(
+        "SELECT * FROM comentarios WHERE reporte_id = ? ORDER BY fecha DESC",
+        [id],
+        (err, rows) => {
+            if (err) {
+                return res.status(500).json({ mensaje: "Error al obtener comentarios", success: false });
+            }
+            res.json(rows || []);
+        }
+    );
+});
+
+// Agregar comentario
+app.post("/reportes/:id/comentarios", (req, res) => {
+    const { id } = req.params;
+    const { usuario, texto } = req.body;
+
+    if (!usuario || !texto) {
+        return res.status(400).json({ mensaje: "Usuario y texto son requeridos", success: false });
+    }
+
+    db.run(
+        "INSERT INTO comentarios (reporte_id, usuario, texto) VALUES (?, ?, ?)",
+        [id, usuario, texto],
+        function(err) {
+            if (err) {
+                return res.status(500).json({ mensaje: "Error al guardar comentario", success: false });
+            }
+            res.json({
+                mensaje: "Comentario agregado",
+                success: true,
+                comentario: {
+                    id: this.lastID,
+                    reporte_id: id,
+                    usuario,
+                    texto,
+                    fecha: new Date().toISOString(),
+                    likes: 0
+                }
+            });
+        }
+    );
+});
+
+// Dar like a un comentario
+app.post("/comentarios/:id/like", (req, res) => {
+    const { id } = req.params;
+    db.run(
+        "UPDATE comentarios SET likes = likes + 1 WHERE id = ?",
+        [id],
+        function(err) {
+            if (err) {
+                return res.status(500).json({ mensaje: "Error al dar like", success: false });
+            }
+            res.json({ mensaje: "Like agregado", success: true });
+        }
+    );
+});
+
+// Eliminar comentario
+app.delete("/comentarios/:id", (req, res) => {
+    const { id } = req.params;
+    db.run("DELETE FROM comentarios WHERE id = ?", [id], function(err) {
+        if (err) {
+            return res.status(500).json({ mensaje: "Error al eliminar comentario", success: false });
+        }
+        res.json({ mensaje: "Comentario eliminado", success: true });
+    });
+});
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`\n🚀 Backend en puerto ${PORT}`);

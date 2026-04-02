@@ -1,50 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner } from 'react-bootstrap';
 import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, X, Link45deg, Check2, Facebook, Twitter, Envelope } from 'react-bootstrap-icons';
-import Confetti from './Confetti';
+import api from '../services/api';
 
-function ReportesList({ reportes, onReporteActualizado }) {
+function ReportesList({ reportes, onReporteActualizado, usuarioActual }) {
+  // Estados para likes
   const [likes, setLikes] = useState({});
   const [liked, setLiked] = useState({});
   const [animating, setAnimating] = useState({});
-  const [showConfetti, setShowConfetti] = useState({});
-  const [consecutiveLikes, setConsecutiveLikes] = useState({});
   
   // Estados para comentarios
   const [showComments, setShowComments] = useState({});
   const [comentarios, setComentarios] = useState({});
   const [nuevoComentario, setNuevoComentario] = useState({});
-  const [comentarioEnviando, setComentarioEnviando] = useState({});
+  const [cargandoComentarios, setCargandoComentarios] = useState({});
+  const [enviandoComentario, setEnviandoComentario] = useState({});
   
   // Estados para compartir
   const [showShare, setShowShare] = useState({});
   const [copied, setCopied] = useState({});
-  const [shareUrl, setShareUrl] = useState('');
 
-  // Cargar datos desde localStorage
+  // Cargar likes desde localStorage
   useEffect(() => {
-    // Cargar likes
     const savedLikes = localStorage.getItem('reportesLikes');
-    if (savedLikes) setLikes(JSON.parse(savedLikes));
     const savedLiked = localStorage.getItem('reportesLiked');
+    if (savedLikes) setLikes(JSON.parse(savedLikes));
     if (savedLiked) setLiked(JSON.parse(savedLiked));
-    
-    // Cargar comentarios
-    const savedComentarios = localStorage.getItem('reportesComentarios');
-    if (savedComentarios) setComentarios(JSON.parse(savedComentarios));
   }, []);
 
-  // Guardar datos en localStorage
+  // Guardar likes en localStorage
   useEffect(() => {
     localStorage.setItem('reportesLikes', JSON.stringify(likes));
     localStorage.setItem('reportesLiked', JSON.stringify(liked));
-    localStorage.setItem('reportesComentarios', JSON.stringify(comentarios));
-  }, [likes, liked, comentarios]);
-
-  // Obtener URL para compartir
-  useEffect(() => {
-    setShareUrl(window.location.href);
-  }, []);
+  }, [likes, liked]);
 
   const getBadgeVariant = (urgencia) => {
     switch(urgencia?.toLowerCase()) {
@@ -68,14 +56,6 @@ function ReportesList({ reportes, onReporteActualizado }) {
 
   // ========== FUNCIONES DE LIKES ==========
   const handleLike = (id) => {
-    const newCount = (consecutiveLikes[id] || 0) + 1;
-    setConsecutiveLikes(prev => ({ ...prev, [id]: newCount }));
-    
-    if (newCount % 5 === 0 && !liked[id]) {
-      setShowConfetti(prev => ({ ...prev, [id]: true }));
-      setTimeout(() => setShowConfetti(prev => ({ ...prev, [id]: false })), 1000);
-    }
-    
     setAnimating(prev => ({ ...prev, [id]: true }));
     setTimeout(() => setAnimating(prev => ({ ...prev, [id]: false })), 300);
 
@@ -101,48 +81,73 @@ function ReportesList({ reportes, onReporteActualizado }) {
   };
 
   // ========== FUNCIONES DE COMENTARIOS ==========
-  const handleToggleComments = (id) => {
-    setShowComments(prev => ({ ...prev, [id]: !prev[id] }));
+  const cargarComentarios = async (reporteId) => {
+    if (comentarios[reporteId]) return;
+    
+    setCargandoComentarios(prev => ({ ...prev, [reporteId]: true }));
+    try {
+      const response = await api.get(`/reportes/${reporteId}/comentarios`);
+      setComentarios(prev => ({ ...prev, [reporteId]: response.data || [] }));
+    } catch (error) {
+      console.error('Error cargando comentarios:', error);
+      setComentarios(prev => ({ ...prev, [reporteId]: [] }));
+    } finally {
+      setCargandoComentarios(prev => ({ ...prev, [reporteId]: false }));
+    }
   };
 
-  const handleAddComentario = async (id) => {
-    if (!nuevoComentario[id]?.trim()) return;
+  const handleToggleComments = async (reporteId) => {
+    const newState = !showComments[reporteId];
+    setShowComments(prev => ({ ...prev, [reporteId]: newState }));
     
-    setComentarioEnviando(prev => ({ ...prev, [id]: true }));
-    
-    // Simular delay de red
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const nuevoComentarioObj = {
-      id: Date.now(),
-      usuario: localStorage.getItem('usuario') || 'Usuario',
-      texto: nuevoComentario[id],
-      fecha: new Date().toISOString(),
-      likes: 0
-    };
-    
-    setComentarios(prev => ({
-      ...prev,
-      [id]: [...(prev[id] || []), nuevoComentarioObj]
-    }));
-    
-    setNuevoComentario(prev => ({ ...prev, [id]: '' }));
-    setComentarioEnviando(prev => ({ ...prev, [id]: false }));
+    if (newState && !comentarios[reporteId]) {
+      await cargarComentarios(reporteId);
+    }
   };
 
-  const handleLikeComentario = (reporteId, comentarioId) => {
-    setComentarios(prev => ({
-      ...prev,
-      [reporteId]: prev[reporteId]?.map(com => 
-        com.id === comentarioId 
-          ? { ...com, likes: (com.likes || 0) + 1 }
-          : com
-      )
-    }));
+  const handleAddComentario = async (reporteId) => {
+    const texto = nuevoComentario[reporteId];
+    if (!texto?.trim()) return;
+    
+    setEnviandoComentario(prev => ({ ...prev, [reporteId]: true }));
+    
+    try {
+      const response = await api.post(`/reportes/${reporteId}/comentarios`, {
+        usuario: usuarioActual || localStorage.getItem('usuario') || 'Usuario',
+        texto: texto.trim()
+      });
+      
+      if (response.data.success) {
+        // Agregar comentario a la lista
+        setComentarios(prev => ({
+          ...prev,
+          [reporteId]: [response.data.comentario, ...(prev[reporteId] || [])]
+        }));
+        setNuevoComentario(prev => ({ ...prev, [reporteId]: '' }));
+      }
+    } catch (error) {
+      console.error('Error al comentar:', error);
+    } finally {
+      setEnviandoComentario(prev => ({ ...prev, [reporteId]: false }));
+    }
   };
 
-  const getComentariosCount = (id) => {
-    return comentarios[id]?.length || 0;
+  const handleLikeComentario = async (comentarioId) => {
+    try {
+      await api.post(`/comentarios/${comentarioId}/like`);
+      // Actualizar UI
+      setComentarios(prev => {
+        const newComentarios = { ...prev };
+        for (const reporteId in newComentarios) {
+          newComentarios[reporteId] = newComentarios[reporteId].map(com =>
+            com.id === comentarioId ? { ...com, likes: (com.likes || 0) + 1 } : com
+          );
+        }
+        return newComentarios;
+      });
+    } catch (error) {
+      console.error('Error al dar like:', error);
+    }
   };
 
   // ========== FUNCIONES DE COMPARTIR ==========
@@ -150,39 +155,34 @@ function ReportesList({ reportes, onReporteActualizado }) {
     setShowShare(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleCopyLink = async (id) => {
-    const reporte = reportes.find(r => r.id === id);
-    const link = `${window.location.origin}/reporte/${id}`;
-    
+  const handleCopyLink = async (reporteId) => {
+    const link = `${window.location.origin}/reporte/${reporteId}`;
     try {
       await navigator.clipboard.writeText(link);
-      setCopied(prev => ({ ...prev, [id]: true }));
-      setTimeout(() => setCopied(prev => ({ ...prev, [id]: false })), 2000);
+      setCopied(prev => ({ ...prev, [reporteId]: true }));
+      setTimeout(() => setCopied(prev => ({ ...prev, [reporteId]: false })), 2000);
     } catch (err) {
       console.error('Error al copiar:', err);
     }
   };
 
-  const handleShareToFacebook = (id) => {
-    const url = `${window.location.origin}/reporte/${id}`;
+  const handleShareToFacebook = (reporteId) => {
+    const url = `${window.location.origin}/reporte/${reporteId}`;
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const handleShareToTwitter = (id) => {
-    const reporte = reportes.find(r => r.id === id);
-    const text = encodeURIComponent(`📸 Reporte: ${reporte?.problema.substring(0, 100)}`);
-    const url = `${window.location.origin}/reporte/${id}`;
+  const handleShareToTwitter = (reporteId, reporte) => {
+    const text = encodeURIComponent(`📸 Reporte: ${reporte?.problema?.substring(0, 100)}`);
+    const url = `${window.location.origin}/reporte/${reporteId}`;
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const handleShareToEmail = (id) => {
-    const reporte = reportes.find(r => r.id === id);
-    const subject = encodeURIComponent(`Reporte #${id} - Sistema de Reportes IA`);
-    const body = encodeURIComponent(`Hola,\n\nTe comparto este reporte:\n\nProblema: ${reporte?.problema}\nUbicación: ${reporte?.modulo}\nUrgencia: ${reporte?.urgencia}\n\nVer más en: ${window.location.origin}`);
+  const handleShareToEmail = (reporteId, reporte) => {
+    const subject = encodeURIComponent(`Reporte #${reporteId} - Sistema de Reportes IA`);
+    const body = encodeURIComponent(`Hola,\n\nTe comparto este reporte:\n\nProblema: ${reporte?.problema}\nUbicación: ${reporte?.modulo}\nUrgencia: ${reporte?.urgencia}\n\nVer más en: ${window.location.origin}/reporte/${reporteId}`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
-  // Formatear fecha
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -208,8 +208,6 @@ function ReportesList({ reportes, onReporteActualizado }) {
     <div>
       {reportes.map((reporte) => (
         <Card key={reporte.id} className="border-0 shadow-sm rounded-3 mb-4 reporte-card">
-          <Confetti active={showConfetti[reporte.id]} onComplete={() => setShowConfetti(prev => ({ ...prev, [reporte.id]: false }))} />
-          
           {/* Header del reporte */}
           <Card.Body className="p-3 pb-2">
             <div className="d-flex justify-content-between align-items-start">
@@ -222,7 +220,7 @@ function ReportesList({ reportes, onReporteActualizado }) {
                   <div className="d-flex align-items-center gap-2 small text-muted">
                     <span>{reporte.modulo}</span>
                     <span>•</span>
-                    <span>{new Date().toLocaleDateString()}</span>
+                    <span>{new Date(reporte.fecha).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
@@ -271,7 +269,7 @@ function ReportesList({ reportes, onReporteActualizado }) {
                   onClick={() => handleToggleComments(reporte.id)}
                 >
                   <Chat size={14} />
-                  <span>{getComentariosCount(reporte.id)} comentarios</span>
+                  <span>{comentarios[reporte.id]?.length || 0} comentarios</span>
                 </div>
                 <div>0 veces compartido</div>
               </div>
@@ -311,41 +309,45 @@ function ReportesList({ reportes, onReporteActualizado }) {
 
             {/* Sección de comentarios */}
             {showComments[reporte.id] && (
-              <div className="mt-3 pt-2 border-top">
-                {/* Lista de comentarios */}
+              <div className="mt-3 pt-2 border-top comments-section">
                 <div className="mb-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                  {comentarios[reporte.id]?.length === 0 && (
+                  {cargandoComentarios[reporte.id] ? (
+                    <div className="text-center py-3">
+                      <Spinner animation="border" size="sm" />
+                    </div>
+                  ) : comentarios[reporte.id]?.length === 0 ? (
                     <div className="text-center text-muted py-3 small">
                       No hay comentarios aún. ¡Sé el primero en comentar!
                     </div>
+                  ) : (
+                    comentarios[reporte.id]?.map((com) => (
+                      <div key={com.id} className="d-flex mb-3">
+                        <div className="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                          {com.usuario?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <div className="bg-light rounded-3 p-2 flex-grow-1">
+                          <div className="d-flex justify-content-between align-items-start">
+                            <span className="fw-bold small">{com.usuario}</span>
+                            <small className="text-muted">{formatDate(com.fecha)}</small>
+                          </div>
+                          <p className="small mb-1">{com.texto}</p>
+                          <div className="d-flex gap-2">
+                            <Button 
+                              variant="link" 
+                              size="sm" 
+                              className="text-muted text-decoration-none p-0 small comment-like"
+                              onClick={() => handleLikeComentario(com.id)}
+                            >
+                              {com.likes > 0 ? `❤️ ${com.likes}` : '❤️ Me gusta'}
+                            </Button>
+                            <Button variant="link" size="sm" className="text-muted text-decoration-none p-0 small">
+                              Responder
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
                   )}
-                  {comentarios[reporte.id]?.map((com) => (
-                    <div key={com.id} className="d-flex mb-3">
-                      <div className="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
-                        {com.usuario?.charAt(0).toUpperCase() || 'U'}
-                      </div>
-                      <div className="bg-light rounded-3 p-2 flex-grow-1">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <span className="fw-bold small">{com.usuario}</span>
-                          <small className="text-muted">{formatDate(com.fecha)}</small>
-                        </div>
-                        <p className="small mb-1">{com.texto}</p>
-                        <div className="d-flex gap-2">
-                          <Button 
-                            variant="link" 
-                            size="sm" 
-                            className="text-muted text-decoration-none p-0 small"
-                            onClick={() => handleLikeComentario(reporte.id, com.id)}
-                          >
-                            {com.likes > 0 ? `❤️ ${com.likes}` : '❤️ Me gusta'}
-                          </Button>
-                          <Button variant="link" size="sm" className="text-muted text-decoration-none p-0 small">
-                            Responder
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
 
                 {/* Input para nuevo comentario */}
@@ -357,20 +359,24 @@ function ReportesList({ reportes, onReporteActualizado }) {
                     onChange={(e) => setNuevoComentario(prev => ({ ...prev, [reporte.id]: e.target.value }))}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddComentario(reporte.id)}
                     className="rounded-pill bg-light border-0"
+                    disabled={!usuarioActual && !localStorage.getItem('usuario')}
                   />
                   <Button 
                     variant="primary" 
                     className="rounded-pill"
                     onClick={() => handleAddComentario(reporte.id)}
-                    disabled={comentarioEnviando[reporte.id] || !nuevoComentario[reporte.id]?.trim()}
+                    disabled={enviandoComentario[reporte.id] || !nuevoComentario[reporte.id]?.trim() || (!usuarioActual && !localStorage.getItem('usuario'))}
                   >
-                    {comentarioEnviando[reporte.id] ? (
-                      <span className="spinner-border spinner-border-sm" />
+                    {enviandoComentario[reporte.id] ? (
+                      <Spinner animation="border" size="sm" />
                     ) : (
                       <Send size={16} />
                     )}
                   </Button>
                 </InputGroup>
+                {(!usuarioActual && !localStorage.getItem('usuario')) && (
+                  <small className="text-muted mt-1 d-block">Inicia sesión para comentar</small>
+                )}
               </div>
             )}
 
@@ -382,8 +388,7 @@ function ReportesList({ reportes, onReporteActualizado }) {
               <Modal.Body className="pt-0">
                 <p className="text-muted small mb-3">Comparte este reporte con otras personas</p>
                 
-                {/* Opciones de compartir */}
-                <div className="d-flex gap-3 mb-4 justify-content-center">
+                <div className="d-flex gap-3 mb-4 justify-content-center share-buttons">
                   <Button 
                     variant="primary" 
                     className="rounded-circle d-flex align-items-center justify-content-center"
@@ -396,7 +401,7 @@ function ReportesList({ reportes, onReporteActualizado }) {
                     variant="info" 
                     className="rounded-circle d-flex align-items-center justify-content-center text-white"
                     style={{ width: '48px', height: '48px' }}
-                    onClick={() => handleShareToTwitter(reporte.id)}
+                    onClick={() => handleShareToTwitter(reporte.id, reporte)}
                   >
                     <Twitter size={24} />
                   </Button>
@@ -404,13 +409,12 @@ function ReportesList({ reportes, onReporteActualizado }) {
                     variant="secondary" 
                     className="rounded-circle d-flex align-items-center justify-content-center"
                     style={{ width: '48px', height: '48px' }}
-                    onClick={() => handleShareToEmail(reporte.id)}
+                    onClick={() => handleShareToEmail(reporte.id, reporte)}
                   >
                     <Envelope size={24} />
                   </Button>
                 </div>
 
-                {/* Copiar enlace */}
                 <div className="border rounded-3 p-2 bg-light">
                   <div className="d-flex align-items-center gap-2">
                     <Link45deg className="text-muted" />
