@@ -1,7 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner, Image } from 'react-bootstrap';
+import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner } from 'react-bootstrap';
 import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Check2, Facebook, Twitter, Envelope, Eye } from 'react-bootstrap-icons';
 import api from '../services/api';
+
+// Componente de imagen con manejo de carga
+function ReporteImagen({ imagen, problema, onClick }) {
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  useEffect(() => {
+    if (imagen) {
+      setCargando(true);
+      setError(false);
+      const url = `${API_URL}/uploads/${imagen}`;
+      setImageUrl(url);
+    }
+  }, [imagen, API_URL]);
+
+  if (!imagen) return null;
+
+  return (
+    <div className="mt-3 position-relative">
+      <div 
+        className="reporte-imagen-container rounded-3 overflow-hidden"
+        style={{ 
+          cursor: 'pointer',
+          maxHeight: '400px',
+          backgroundColor: '#f0f2f5',
+          minHeight: '200px'
+        }}
+        onClick={onClick}
+      >
+        {cargando && (
+          <div className="d-flex align-items-center justify-content-center h-100" style={{ minHeight: '200px' }}>
+            <Spinner animation="border" variant="primary" size="sm" className="me-2" />
+            <span className="text-muted">Cargando imagen...</span>
+          </div>
+        )}
+        
+        {!error && (
+          <img 
+            src={imageUrl}
+            alt={problema || "Evidencia del reporte"}
+            className="img-fluid w-100"
+            style={{ 
+              objectFit: 'cover',
+              maxHeight: '350px',
+              transition: 'transform 0.3s ease',
+              display: cargando ? 'none' : 'block'
+            }}
+            onLoad={() => setCargando(false)}
+            onError={() => {
+              setCargando(false);
+              setError(true);
+            }}
+          />
+        )}
+        
+        {error && (
+          <div className="d-flex flex-column align-items-center justify-content-center p-4" style={{ minHeight: '200px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc3545" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="8.82" y1="8.82" x2="15.18" y2="15.18"></line>
+              <line x1="15.18" y1="8.82" x2="8.82" y2="15.18"></line>
+            </svg>
+            <p className="text-danger mt-2 small mb-0">No se pudo cargar la imagen</p>
+          </div>
+        )}
+        
+        <div className="imagen-overlay">
+          <Eye size={20} className="text-white" />
+          <span className="text-white ms-2 small">Ver imagen completa</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ReportesList({ reportes, usuarioActual }) {
   // Estados para likes
@@ -77,12 +154,6 @@ function ReportesList({ reportes, usuarioActual }) {
       'Servicios': 'success'
     };
     return colors[categoria] || 'secondary';
-  };
-
-  // Obtener URL de la imagen
-  const getImageUrl = (imagen) => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${API_URL}/uploads/${imagen}`;
   };
 
   // ========== FUNCIONES DE LIKES ==========
@@ -320,37 +391,13 @@ function ReportesList({ reportes, usuarioActual }) {
             </div>
             <p className="mb-2">{reporte.problema}</p>
             
-            {/* IMAGEN DEL REPORTE */}
+            {/* IMAGEN DEL REPORTE - Usando el nuevo componente */}
             {reporte.imagen && (
-              <div className="mt-3 position-relative">
-                <div 
-                  className="reporte-imagen-container rounded-3 overflow-hidden"
-                  style={{ 
-                    cursor: 'pointer',
-                    maxHeight: '400px',
-                    backgroundColor: '#f0f2f5'
-                  }}
-                  onClick={() => handleVerImagen(reporte)}
-                >
-                  <img 
-                    src={getImageUrl(reporte.imagen)}
-                    alt="Evidencia del reporte"
-                    className="img-fluid w-100"
-                    style={{ 
-                      objectFit: 'cover',
-                      maxHeight: '350px',
-                      transition: 'transform 0.3s ease'
-                    }}
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/400x300?text=Imagen+no+disponible';
-                    }}
-                  />
-                  <div className="imagen-overlay">
-                    <Eye size={24} className="text-white" />
-                    <span className="text-white ms-2">Ver imagen completa</span>
-                  </div>
-                </div>
-              </div>
+              <ReporteImagen 
+                imagen={reporte.imagen} 
+                problema={reporte.problema}
+                onClick={() => handleVerImagen(reporte)}
+              />
             )}
           </Card.Body>
 
@@ -551,7 +598,7 @@ function ReportesList({ reportes, usuarioActual }) {
         onHide={() => {
           if (imagenSeleccionada) {
             setShowImageModal(prev => ({ ...prev, [imagenSeleccionada.id]: false }));
-            setImagenSeleccionada(null);
+            setTimeout(() => setImagenSeleccionada(null), 300);
           }
         }} 
         centered 
@@ -573,12 +620,16 @@ function ReportesList({ reportes, usuarioActual }) {
         </Modal.Header>
         <Modal.Body className="pt-0 text-center">
           {imagenSeleccionada && (
-            <>
+            <div className="modal-imagen-container">
               <img 
-                src={getImageUrl(imagenSeleccionada.imagen)}
+                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/uploads/${imagenSeleccionada.imagen}`}
                 alt="Evidencia del reporte"
                 className="img-fluid rounded-3"
-                style={{ maxHeight: '70vh', objectFit: 'contain' }}
+                style={{ 
+                  maxHeight: '70vh', 
+                  objectFit: 'contain',
+                  width: '100%'
+                }}
                 onError={(e) => {
                   e.target.src = 'https://via.placeholder.com/800x600?text=Imagen+no+disponible';
                 }}
@@ -588,7 +639,7 @@ function ReportesList({ reportes, usuarioActual }) {
                 <p className="mb-0"><strong>Urgencia:</strong> {imagenSeleccionada.urgencia}</p>
                 <p className="mb-0"><strong>Categoría:</strong> {imagenSeleccionada.categoria}</p>
               </div>
-            </>
+            </div>
           )}
         </Modal.Body>
       </Modal>
