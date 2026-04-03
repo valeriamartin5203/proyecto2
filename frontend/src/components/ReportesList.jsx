@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner } from 'react-bootstrap';
 import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Check2, Facebook, Twitter, Envelope, Eye } from 'react-bootstrap-icons';
 import api from '../services/api';
+import Confetti from './Confetti';
 
-// Componente de imagen con manejo de carga
+// Componente de imagen con Cloudinary
 function ReporteImagen({ imagen, problema, onClick }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
@@ -15,7 +16,14 @@ function ReporteImagen({ imagen, problema, onClick }) {
     if (imagen) {
       setCargando(true);
       setError(false);
-      const url = `${API_URL}/uploads/${imagen}`;
+      
+      let url;
+      if (imagen.startsWith('http://') || imagen.startsWith('https://')) {
+        url = imagen;
+      } else {
+        url = `${API_URL}/uploads/${imagen}`;
+      }
+      
       setImageUrl(url);
     }
   }, [imagen, API_URL]);
@@ -86,6 +94,10 @@ function ReportesList({ reportes, usuarioActual }) {
   const [liked, setLiked] = useState({});
   const [animating, setAnimating] = useState({});
   const [cargandoLikes, setCargandoLikes] = useState(true);
+  
+  // Estados para confeti
+  const [showConfetti, setShowConfetti] = useState({});
+  const [consecutiveLikes, setConsecutiveLikes] = useState({});
   
   // Estados para comentarios
   const [showComments, setShowComments] = useState({});
@@ -163,6 +175,17 @@ function ReportesList({ reportes, usuarioActual }) {
       return;
     }
     
+    // Contar likes consecutivos para confeti
+    const newCount = (consecutiveLikes[reporteId] || 0) + 1;
+    setConsecutiveLikes(prev => ({ ...prev, [reporteId]: newCount }));
+    
+    // Mostrar confeti en cada like (o cada 5 likes)
+    if (newCount % 3 === 0 && !liked[reporteId]) {
+      setShowConfetti(prev => ({ ...prev, [reporteId]: true }));
+      setTimeout(() => setShowConfetti(prev => ({ ...prev, [reporteId]: false })), 1500);
+    }
+    
+    // Animación de "pop"
     setAnimating(prev => ({ ...prev, [reporteId]: true }));
     setTimeout(() => setAnimating(prev => ({ ...prev, [reporteId]: false })), 300);
     
@@ -345,10 +368,18 @@ function ReportesList({ reportes, usuarioActual }) {
     );
   }
 
+  // ========== RETURN PRINCIPAL CON CONFETI ==========
   return (
     <div>
       {reportes.map((reporte) => (
         <Card key={reporte.id} className="border-0 shadow-sm rounded-3 mb-4 reporte-card">
+          
+          {/* ========== CONFETI ========== */}
+          <Confetti 
+            active={showConfetti[reporte.id]} 
+            onComplete={() => setShowConfetti(prev => ({ ...prev, [reporte.id]: false }))} 
+          />
+          
           {/* Header del reporte */}
           <Card.Body className="p-3 pb-2">
             <div className="d-flex justify-content-between align-items-start">
@@ -391,7 +422,7 @@ function ReportesList({ reportes, usuarioActual }) {
             </div>
             <p className="mb-2">{reporte.problema}</p>
             
-            {/* IMAGEN DEL REPORTE - Usando el nuevo componente */}
+            {/* IMAGEN DEL REPORTE */}
             {reporte.imagen && (
               <ReporteImagen 
                 imagen={reporte.imagen} 
@@ -622,7 +653,7 @@ function ReportesList({ reportes, usuarioActual }) {
           {imagenSeleccionada && (
             <div className="modal-imagen-container">
               <img 
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/uploads/${imagenSeleccionada.imagen}`}
+                src={imagenSeleccionada.imagen?.startsWith('http') ? imagenSeleccionada.imagen : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/uploads/${imagenSeleccionada.imagen}`}
                 alt="Evidencia del reporte"
                 className="img-fluid rounded-3"
                 style={{ 

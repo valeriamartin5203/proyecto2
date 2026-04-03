@@ -67,18 +67,30 @@ const model = genAI.getGenerativeModel({ model: MODELO_GEMINI });
 console.log(`🤖 Gemini configurado: ${MODELO_GEMINI}`);
 
 // ========== UPLOADS ==========
-const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// ========== CLOUDINARY (Solución para plan gratuito) ==========
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-        cb(null, `reporte-${uniqueSuffix}${path.extname(file.originalname)}`);
+// Configurar Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configurar almacenamiento
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'reportes',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'jfif'],
+        transformation: [{ width: 800, height: 600, crop: 'limit' }]
     }
 });
 
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+console.log("✅ Cloudinary configurado (imágenes permanentes)");
 
 // ========== RUTAS ==========
 app.get("/", (req, res) => {
