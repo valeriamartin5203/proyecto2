@@ -12,8 +12,19 @@ function ReporteImagen({ imagen, problema, onClick }) {
     if (imagen) {
       setCargando(true);
       setError(false);
-      // Construir URL de la imagen
-      const url = `${API_URL}/uploads/${imagen}`;
+      
+      // Determinar la URL correcta
+      let url;
+      if (imagen.startsWith('http://') || imagen.startsWith('https://')) {
+        // Si ya es una URL completa (Cloudinary), usarla directamente
+        url = imagen;
+        console.log("✅ Usando URL completa de Cloudinary:", url);
+      } else {
+        // Si es solo el nombre del archivo, construir URL local
+        url = `${API_URL}/uploads/${imagen}`;
+        console.log("📁 Usando URL local:", url);
+      }
+      
       setImageUrl(url);
     }
   }, [imagen, API_URL]);
@@ -54,8 +65,12 @@ function ReporteImagen({ imagen, problema, onClick }) {
               transition: 'transform 0.3s ease',
               display: cargando ? 'none' : 'block'
             }}
-            onLoad={() => setCargando(false)}
+            onLoad={() => {
+              console.log("✅ Imagen cargada exitosamente");
+              setCargando(false);
+            }}
             onError={() => {
+              console.error("❌ Error cargando imagen:", imageUrl);
               setCargando(false);
               setError(true);
             }}
@@ -71,6 +86,7 @@ function ReporteImagen({ imagen, problema, onClick }) {
               <line x1="15.18" y1="8.82" x2="8.82" y2="15.18"></line>
             </svg>
             <p className="text-danger mt-2 small">No se pudo cargar la imagen</p>
+            <p className="text-muted small mt-1">URL: {imageUrl?.substring(0, 80)}...</p>
           </div>
         )}
         

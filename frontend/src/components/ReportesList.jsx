@@ -4,31 +4,16 @@ import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Chec
 import api from '../services/api';
 import Confetti from './Confetti';
 
-// Componente de imagen con Cloudinary
+// Componente de imagen CORREGIDO - Usa la URL directamente
 function ReporteImagen({ imagen, problema, onClick }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
-  
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  useEffect(() => {
-    if (imagen) {
-      setCargando(true);
-      setError(false);
-      
-      let url;
-      if (imagen.startsWith('http://') || imagen.startsWith('https://')) {
-        url = imagen;
-      } else {
-        url = `${API_URL}/uploads/${imagen}`;
-      }
-      
-      setImageUrl(url);
-    }
-  }, [imagen, API_URL]);
-
+  // Si no hay imagen, no mostrar nada
   if (!imagen) return null;
+
+  // La imagen YA ES la URL completa de Cloudinary
+  const imageUrl = imagen;
 
   return (
     <div className="mt-3 position-relative">
@@ -175,17 +160,14 @@ function ReportesList({ reportes, usuarioActual }) {
       return;
     }
     
-    // Contar likes consecutivos para confeti
     const newCount = (consecutiveLikes[reporteId] || 0) + 1;
     setConsecutiveLikes(prev => ({ ...prev, [reporteId]: newCount }));
     
-    // Mostrar confeti en cada like (o cada 5 likes)
     if (newCount % 3 === 0 && !liked[reporteId]) {
       setShowConfetti(prev => ({ ...prev, [reporteId]: true }));
       setTimeout(() => setShowConfetti(prev => ({ ...prev, [reporteId]: false })), 1500);
     }
     
-    // Animación de "pop"
     setAnimating(prev => ({ ...prev, [reporteId]: true }));
     setTimeout(() => setAnimating(prev => ({ ...prev, [reporteId]: false })), 300);
     
@@ -368,13 +350,11 @@ function ReportesList({ reportes, usuarioActual }) {
     );
   }
 
-  // ========== RETURN PRINCIPAL CON CONFETI ==========
   return (
     <div>
       {reportes.map((reporte) => (
         <Card key={reporte.id} className="border-0 shadow-sm rounded-3 mb-4 reporte-card">
           
-          {/* ========== CONFETI ========== */}
           <Confetti 
             active={showConfetti[reporte.id]} 
             onComplete={() => setShowConfetti(prev => ({ ...prev, [reporte.id]: false }))} 
@@ -460,7 +440,6 @@ function ReportesList({ reportes, usuarioActual }) {
               </div>
             </div>
             
-            {/* Botones de acción */}
             <div className="d-flex justify-content-around pt-2 border-top">
               <Button 
                 variant="link" 
@@ -536,7 +515,6 @@ function ReportesList({ reportes, usuarioActual }) {
                   )}
                 </div>
 
-                {/* Input para nuevo comentario */}
                 <InputGroup>
                   <Form.Control
                     type="text"
@@ -653,7 +631,7 @@ function ReportesList({ reportes, usuarioActual }) {
           {imagenSeleccionada && (
             <div className="modal-imagen-container">
               <img 
-                src={imagenSeleccionada.imagen?.startsWith('http') ? imagenSeleccionada.imagen : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/uploads/${imagenSeleccionada.imagen}`}
+                src={imagenSeleccionada.imagen}
                 alt="Evidencia del reporte"
                 className="img-fluid rounded-3"
                 style={{ 
