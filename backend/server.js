@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { v2 as cloudinary } from 'cloudinary';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,7 +48,7 @@ db.serialize(() => {
         problema TEXT NOT NULL,
         categoria TEXT NOT NULL,
         urgencia TEXT NOT NULL,
-        imagen TEXT,
+        imagen TEXT,  -- Aquí se guardará la URL de Cloudinary
         fecha DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 });
@@ -66,41 +67,20 @@ const model = genAI.getGenerativeModel({ model: MODELO_GEMINI });
 
 console.log(`🤖 Gemini configurado: ${MODELO_GEMINI}`);
 
-// ========== UPLOADS ==========
-// ========== CLOUDINARY (Solución para plan gratuito) ==========
-// ========== CLOUDINARY (Almacenamiento permanente) ==========
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-
-// Configurar Cloudinary
+// ========== CLOUDINARY ==========
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configurar almacenamiento en Cloudinary
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'reportes',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'jfif'],
-        transformation: [{ width: 800, height: 600, crop: 'limit' }]
-    }
+console.log("✅ Cloudinary configurado");
+
+// ========== MULTER CON MEMORY STORAGE ==========
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 } // 10 MB
 });
-
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
-
-// Nota: Ya no necesitas uploadDir para archivos locales
-// pero si quieres mantener compatibilidad con imágenes antiguas:
-const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-console.log("✅ Cloudinary configurado para almacenamiento permanente");
-
-// ========== SERVIR IMÁGENES (opcional, para compatibilidad) ==========
-// Comenta esta línea si solo usas Cloudinary:
-// app.use("/uploads", express.static(uploadDir));
 
 // ========== RUTAS ==========
 app.get("/", (req, res) => {
@@ -140,30 +120,32 @@ app.post("/login", (req, res) => {
     });
 });
 
+// ========== CREAR REPORTE CON GEMINI + CLOUDINARY ==========
 app.post("/reportes", upload.single("imagen"), async (req, res) => {
-    let imagePath = null;
     try {
-        if (!req.file) return res.status(400).json({ mensaje: "No se recibió imagen", success: false });
-        imagePath = req.file.path;
+        // 1. Validar que llegue la imagen
+        if (!req.file) {
+            return res.status(400).json({ mensaje: "No se recibió imagen", success: false });
+        }
 
         const { usuario, modulo } = req.body;
         if (!usuario || !modulo) {
-            fs.unlinkSync(imagePath);
             return res.status(400).json({ mensaje: "Faltan datos", success: false });
         }
 
+        // 2. Verificar usuario
         const userExists = await new Promise((resolve) => {
             db.get("SELECT id FROM users WHERE usuario = ?", [usuario], (err, row) => resolve(!!row));
         });
-
         if (!userExists) {
-            fs.unlinkSync(imagePath);
             return res.status(400).json({ mensaje: "Usuario no existe", success: false });
         }
 
-        const imageBuffer = fs.readFileSync(imagePath);
+        // 3. Obtener buffer de la imagen
+        const imageBuffer = req.file.buffer;
         const base64Image = imageBuffer.toString("base64");
 
+        // 4. Analizar imagen con Gemini
         const prompt = `Analiza esta imagen y responde SOLO con JSON:
         {"problema":"descripción","categoria":"Infraestructura/Limpieza/Seguridad/Tecnología/Servicios","urgencia":"Baja/Media/Alta"}`;
 
@@ -184,33 +166,60 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
             datos = { problema: "Problema detectado", categoria: "Infraestructura", urgencia: "Media" };
         }
 
+        // 5. Subir imagen a Cloudinary
+        const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { folder: 'reportes' },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(imageBuffer);
+        });
+
+        const imagenUrl = uploadResult.secure_url;  // URL pública de Cloudinary
+
+        // 6. Guardar reporte en base de datos (guardamos la URL)
         db.run(
             `INSERT INTO reportes (usuario, modulo, problema, categoria, urgencia, imagen) VALUES (?, ?, ?, ?, ?, ?)`,
-            [usuario, modulo, datos.problema, datos.categoria, datos.urgencia, req.file.filename],
+            [usuario, modulo, datos.problema, datos.categoria, datos.urgencia, imagenUrl],
             function(err) {
-                if (err) return res.status(500).json({ mensaje: "Error guardando", success: false });
-                res.json({ mensaje: "Reporte guardado", success: true, reporte: { id: this.lastID, ...datos } });
+                if (err) {
+                    console.error("Error BD:", err);
+                    return res.status(500).json({ mensaje: "Error guardando", success: false });
+                }
+                res.json({
+                    mensaje: "Reporte guardado",
+                    success: true,
+                    reporte: {
+                        id: this.lastID,
+                        usuario,
+                        modulo,
+                        problema: datos.problema,
+                        categoria: datos.categoria,
+                        urgencia: datos.urgencia,
+                        imagen: imagenUrl
+                    }
+                });
             }
         );
 
     } catch (error) {
-        if (imagePath && fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
-        res.status(500).json({ mensaje: "Error", success: false });
+        console.error("Error en /reportes:", error);
+        res.status(500).json({ mensaje: "Error procesando reporte", success: false, error: error.message });
     }
 });
 
+// ========== OBTENER REPORTES ==========
 app.get("/reportes", (req, res) => {
     db.all("SELECT * FROM reportes ORDER BY id DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ mensaje: "Error" });
         res.json(rows || []);
     });
 });
 
-app.use("/uploads", express.static(uploadDir));
-
 // ========== COMENTARIOS ==========
-
-// Tabla de comentarios
-// ========== TABLA DE COMENTARIOS ==========
 db.run(`
     CREATE TABLE IF NOT EXISTS comentarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -226,40 +235,28 @@ db.run(`
     else console.log("✅ Tabla 'comentarios' lista");
 });
 
-// ========== RUTAS DE COMENTARIOS ==========
-
-// Obtener comentarios de un reporte
 app.get("/api/comentarios/:reporteId", (req, res) => {
     const { reporteId } = req.params;
     db.all(
         "SELECT * FROM comentarios WHERE reporte_id = ? ORDER BY fecha DESC",
         [reporteId],
         (err, rows) => {
-            if (err) {
-                console.error("Error al obtener comentarios:", err);
-                return res.status(500).json({ mensaje: "Error al obtener comentarios", success: false });
-            }
+            if (err) return res.status(500).json({ mensaje: "Error al obtener comentarios", success: false });
             res.json(rows || []);
         }
     );
 });
 
-// Agregar comentario
 app.post("/api/comentarios", (req, res) => {
     const { reporteId, usuario, texto } = req.body;
-
     if (!reporteId || !usuario || !texto) {
         return res.status(400).json({ mensaje: "Faltan datos", success: false });
     }
-
     db.run(
         "INSERT INTO comentarios (reporte_id, usuario, texto) VALUES (?, ?, ?)",
         [reporteId, usuario, texto],
         function(err) {
-            if (err) {
-                console.error("Error al guardar comentario:", err);
-                return res.status(500).json({ mensaje: "Error al guardar comentario", success: false });
-            }
+            if (err) return res.status(500).json({ mensaje: "Error al guardar comentario", success: false });
             res.json({
                 mensaje: "Comentario agregado",
                 success: true,
@@ -276,24 +273,15 @@ app.post("/api/comentarios", (req, res) => {
     );
 });
 
-// Dar like a un comentario
 app.post("/api/comentarios/:id/like", (req, res) => {
     const { id } = req.params;
-    db.run(
-        "UPDATE comentarios SET likes = likes + 1 WHERE id = ?",
-        [id],
-        function(err) {
-            if (err) {
-                console.error("Error al dar like:", err);
-                return res.status(500).json({ mensaje: "Error al dar like", success: false });
-            }
-            res.json({ mensaje: "Like agregado", success: true });
-        }
-    );
+    db.run("UPDATE comentarios SET likes = likes + 1 WHERE id = ?", [id], function(err) {
+        if (err) return res.status(500).json({ mensaje: "Error al dar like", success: false });
+        res.json({ mensaje: "Like agregado", success: true });
+    });
 });
 
-
-// ========== TABLA DE LIKES ==========
+// ========== LIKES EN REPORTES ==========
 db.run(`
     CREATE TABLE IF NOT EXISTS reportes_likes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -308,122 +296,54 @@ db.run(`
     else console.log("✅ Tabla 'reportes_likes' lista");
 });
 
-// ========== RUTAS DE LIKES ==========
-
-// Obtener likes de un reporte
 app.get("/api/likes/:reporteId", (req, res) => {
     const { reporteId } = req.params;
-    db.get(
-        "SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?",
-        [reporteId],
-        (err, row) => {
-            if (err) {
-                return res.status(500).json({ mensaje: "Error al obtener likes", success: false });
-            }
-            res.json({ total: row?.total || 0 });
-        }
-    );
+    db.get("SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?", [reporteId], (err, row) => {
+        if (err) return res.status(500).json({ mensaje: "Error al obtener likes", success: false });
+        res.json({ total: row?.total || 0 });
+    });
 });
 
-// Verificar si un usuario ya dio like
 app.get("/api/likes/:reporteId/:usuario", (req, res) => {
     const { reporteId, usuario } = req.params;
-    db.get(
-        "SELECT * FROM reportes_likes WHERE reporte_id = ? AND usuario = ?",
-        [reporteId, usuario],
-        (err, row) => {
-            if (err) {
-                return res.status(500).json({ mensaje: "Error al verificar like", success: false });
-            }
-            res.json({ liked: !!row });
-        }
-    );
+    db.get("SELECT * FROM reportes_likes WHERE reporte_id = ? AND usuario = ?", [reporteId, usuario], (err, row) => {
+        if (err) return res.status(500).json({ mensaje: "Error al verificar like", success: false });
+        res.json({ liked: !!row });
+    });
 });
 
-// Dar o quitar like
 app.post("/api/likes/toggle", (req, res) => {
     const { reporteId, usuario } = req.body;
+    if (!reporteId || !usuario) return res.status(400).json({ mensaje: "Faltan datos", success: false });
 
-    if (!reporteId || !usuario) {
-        return res.status(400).json({ mensaje: "Faltan datos", success: false });
-    }
+    db.get("SELECT * FROM reportes_likes WHERE reporte_id = ? AND usuario = ?", [reporteId, usuario], (err, row) => {
+        if (err) return res.status(500).json({ mensaje: "Error al verificar like", success: false });
 
-    // Verificar si ya existe el like
-    db.get(
-        "SELECT * FROM reportes_likes WHERE reporte_id = ? AND usuario = ?",
-        [reporteId, usuario],
-        (err, row) => {
-            if (err) {
-                return res.status(500).json({ mensaje: "Error al verificar like", success: false });
-            }
-
-            if (row) {
-                // Si ya existe, eliminar like (quitar like)
-                db.run(
-                    "DELETE FROM reportes_likes WHERE reporte_id = ? AND usuario = ?",
-                    [reporteId, usuario],
-                    function(err) {
-                        if (err) {
-                            return res.status(500).json({ mensaje: "Error al quitar like", success: false });
-                        }
-                        // Obtener el nuevo total
-                        db.get(
-                            "SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?",
-                            [reporteId],
-                            (err, countRow) => {
-                                res.json({
-                                    mensaje: "Like eliminado",
-                                    success: true,
-                                    liked: false,
-                                    total: countRow?.total || 0
-                                });
-                            }
-                        );
-                    }
-                );
-            } else {
-                // Si no existe, agregar like
-                db.run(
-                    "INSERT INTO reportes_likes (reporte_id, usuario) VALUES (?, ?)",
-                    [reporteId, usuario],
-                    function(err) {
-                        if (err) {
-                            return res.status(500).json({ mensaje: "Error al dar like", success: false });
-                        }
-                        // Obtener el nuevo total
-                        db.get(
-                            "SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?",
-                            [reporteId],
-                            (err, countRow) => {
-                                res.json({
-                                    mensaje: "Like agregado",
-                                    success: true,
-                                    liked: true,
-                                    total: countRow?.total || 0
-                                });
-                            }
-                        );
-                    }
-                );
-            }
+        if (row) {
+            db.run("DELETE FROM reportes_likes WHERE reporte_id = ? AND usuario = ?", [reporteId, usuario], function(err) {
+                if (err) return res.status(500).json({ mensaje: "Error al quitar like", success: false });
+                db.get("SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?", [reporteId], (err, countRow) => {
+                    res.json({ mensaje: "Like eliminado", success: true, liked: false, total: countRow?.total || 0 });
+                });
+            });
+        } else {
+            db.run("INSERT INTO reportes_likes (reporte_id, usuario) VALUES (?, ?)", [reporteId, usuario], function(err) {
+                if (err) return res.status(500).json({ mensaje: "Error al dar like", success: false });
+                db.get("SELECT COUNT(*) as total FROM reportes_likes WHERE reporte_id = ?", [reporteId], (err, countRow) => {
+                    res.json({ mensaje: "Like agregado", success: true, liked: true, total: countRow?.total || 0 });
+                });
+            });
         }
-    );
+    });
 });
 
-// Obtener todos los likes del usuario (para cargar al iniciar)
 app.get("/api/likes/usuario/:usuario", (req, res) => {
     const { usuario } = req.params;
-    db.all(
-        "SELECT reporte_id FROM reportes_likes WHERE usuario = ?",
-        [usuario],
-        (err, rows) => {
-            if (err) {
-                return res.status(500).json({ mensaje: "Error al obtener likes del usuario", success: false });
-            }
-            const likedReportes = rows.map(row => row.reporte_id);
-            res.json({ likedReportes });
-        }
-    );
+    db.all("SELECT reporte_id FROM reportes_likes WHERE usuario = ?", [usuario], (err, rows) => {
+        if (err) return res.status(500).json({ mensaje: "Error al obtener likes del usuario", success: false });
+        const likedReportes = rows.map(row => row.reporte_id);
+        res.json({ likedReportes });
+    });
 });
 
 const PORT = process.env.PORT || 10000;
