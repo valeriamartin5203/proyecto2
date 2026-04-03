@@ -346,6 +346,14 @@ app.get("/api/likes/usuario/:usuario", (req, res) => {
     });
 });
 
+// Endpoint para debuggear (temporal)
+app.get("/api/debug/ultimo-reporte", (req, res) => {
+    db.get("SELECT * FROM reportes ORDER BY id DESC LIMIT 1", [], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(row);
+    });
+});
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`\n🚀 Backend en puerto ${PORT}`);
