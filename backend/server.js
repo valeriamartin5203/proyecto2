@@ -68,6 +68,7 @@ console.log(`🤖 Gemini configurado: ${MODELO_GEMINI}`);
 
 // ========== UPLOADS ==========
 // ========== CLOUDINARY (Solución para plan gratuito) ==========
+// ========== CLOUDINARY (Almacenamiento permanente) ==========
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
@@ -78,7 +79,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configurar almacenamiento
+// Configurar almacenamiento en Cloudinary
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
@@ -90,7 +91,16 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-console.log("✅ Cloudinary configurado (imágenes permanentes)");
+// Nota: Ya no necesitas uploadDir para archivos locales
+// pero si quieres mantener compatibilidad con imágenes antiguas:
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+console.log("✅ Cloudinary configurado para almacenamiento permanente");
+
+// ========== SERVIR IMÁGENES (opcional, para compatibilidad) ==========
+// Comenta esta línea si solo usas Cloudinary:
+// app.use("/uploads", express.static(uploadDir));
 
 // ========== RUTAS ==========
 app.get("/", (req, res) => {
