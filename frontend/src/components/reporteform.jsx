@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Form, Button, Spinner, Image } from 'react-bootstrap';
+import { Form, Button, Spinner } from 'react-bootstrap';
 import { Camera } from 'react-bootstrap-icons';
 import api from '../services/api';
+import MapaImagenSelector from './MapaImagenSelector'; // Importar el nuevo componente
 
 const MODULOS = [
   "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
@@ -15,9 +16,11 @@ const MODULOS = [
 
 function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
   const [modulo, setModulo] = useState('');
+  const [ubicacion, setUbicacion] = useState(null);
   const [imagen, setImagen] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [usarMapa, setUsarMapa] = useState(false);
 
   const handleImagenChange = (e) => {
     const file = e.target.files[0];
@@ -33,11 +36,16 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
     }
   };
 
+  const handleUbicacionChange = (ubicacionData) => {
+    setUbicacion(ubicacionData);
+    setModulo(ubicacionData.direccion);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!modulo) {
-      mostrarAlerta('Selecciona un módulo', 'error');
+      mostrarAlerta('Selecciona una ubicación', 'error');
       return;
     }
 
@@ -52,6 +60,11 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
     formData.append('usuario', usuario);
     formData.append('modulo', modulo);
     formData.append('imagen', imagen);
+    
+    if (ubicacion) {
+      formData.append('x', ubicacion.x);
+      formData.append('y', ubicacion.y);
+    }
 
     try {
       const response = await api.post('/reportes', formData, {
@@ -61,6 +74,7 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
       if (response.data.success) {
         mostrarAlerta('✅ Reporte creado con éxito', 'success');
         setModulo('');
+        setUbicacion(null);
         setImagen(null);
         setPreview(null);
         onReporteCreado();
@@ -77,47 +91,71 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
 
   return (
     <Form onSubmit={handleSubmit}>
-      <Form.Group className="mb-3">
-        <Form.Label>📍 Módulo / Ubicación</Form.Label>
-        <Form.Select
-          value={modulo}
-          onChange={(e) => setModulo(e.target.value)}
-          disabled={loading}
-          size="lg"
-        >
-          <option value="">-- Selecciona un módulo --</option>
-          {MODULOS.map((mod) => (
-            <option key={mod} value={mod}>{mod}</option>
-          ))}
-        </Form.Select>
-        <Form.Text className="text-muted">
-          Total: {MODULOS.length} módulos disponibles
-        </Form.Text>
-      </Form.Group>
+      <div className="mb-3">
+        <div className="d-flex gap-3 mb-3">
+          <Button 
+            variant={!usarMapa ? 'primary' : 'outline-secondary'} 
+            size="sm"
+            onClick={() => setUsarMapa(false)}
+          >
+            📋 Lista de módulos
+          </Button>
+          <Button 
+            variant={usarMapa ? 'primary' : 'outline-secondary'} 
+            size="sm"
+            onClick={() => setUsarMapa(true)}
+          >
+            🗺️ Seleccionar en mapa del campus
+          </Button>
+        </div>
+
+        {!usarMapa ? (
+          <div className="form-group">
+            <label className="form-label">📍 Módulo / Ubicación:</label>
+            <select
+              className="form-select"
+              value={modulo}
+              onChange={(e) => setModulo(e.target.value)}
+              disabled={loading}
+              size="8"
+            >
+              <option value="">-- Selecciona un módulo --</option>
+              {MODULOS.map((mod) => (
+                <option key={mod} value={mod}>{mod}</option>
+              ))}
+            </select>
+            <small className="text-muted">
+              Total: {MODULOS.length} módulos disponibles
+            </small>
+          </div>
+        ) : (
+          <MapaImagenSelector 
+            ubicacionSeleccionada={ubicacion}
+            onUbicacionChange={handleUbicacionChange}
+            moduloSeleccionado={modulo}
+            onModuloChange={setModulo}
+          />
+        )}
+      </div>
       
-      <Form.Group className="mb-3">
-        <Form.Label>📸 Imagen del problema</Form.Label>
-        <Form.Control
+      <div className="form-group">
+        <label className="form-label">📸 Imagen del problema:</label>
+        <input
           type="file"
           id="imagenInput"
           accept="image/*"
           onChange={handleImagenChange}
           disabled={loading}
+          className="form-input"
         />
-        <Form.Text className="text-muted">
+        <small className="text-muted">
           Formatos: PNG, JPG, JPEG, GIF, WEBP (Máx: 10MB)
-        </Form.Text>
-      </Form.Group>
+        </small>
+      </div>
 
       {preview && (
-        <div className="mb-3 text-center">
-          <Image 
-            src={preview} 
-            alt="Vista previa" 
-            fluid 
-            rounded 
-            style={{ maxHeight: '200px', objectFit: 'contain' }}
-          />
+        <div className="preview-container mt-3">
+          <img src={preview} alt="Vista previa" className="preview-image" />
         </div>
       )}
       
@@ -126,7 +164,7 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
         variant="primary" 
         size="lg"
         disabled={loading || !modulo}
-        className="w-100"
+        className="w-100 mt-3"
       >
         {loading ? (
           <>
