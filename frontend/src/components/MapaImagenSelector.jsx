@@ -1,17 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSeleccionado, onModuloChange }) {
-  const [coordenadasImagen, setCoordenadasImagen] = useState({ x: null, y: null, px: null, py: null });
+  const [coordenadasImagen, setCoordenadasImagen] = useState({ x: null, y: null });
   const [mostrarMapa, setMostrarMapa] = useState(false);
   const [hoverCoords, setHoverCoords] = useState({ x: null, y: null, mostrar: false });
   const [dimensionesImagen, setDimensionesImagen] = useState({ width: 0, height: 0 });
-  const [modulosCercanos, setModulosCercanos] = useState([]);
-  const [mostrarNombres, setMostrarNombres] = useState(false);
   const [filtroModulo, setFiltroModulo] = useState('');
   const imagenRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Módulos predefinidos con coordenadas relativas a la imagen (porcentajes)
+  // Módulos predefinidos con coordenadas
   const modulos = [
     { id: 'A', nombre: 'Módulo A', x: 10, y: 20, descripcion: 'Edificio principal' },
     { id: 'B', nombre: 'Módulo B', x: 15, y: 25, descripcion: 'Biblioteca' },
@@ -56,66 +54,45 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
     { id: 'laboratorio_ingenieria', nombre: 'Laboratorio de Ingeniería', x: 5, y: 10, descripcion: 'Ingeniería' }
   ];
 
-  // Filtrar módulos por búsqueda
   const modulosFiltrados = modulos.filter(modulo =>
     modulo.nombre.toLowerCase().includes(filtroModulo.toLowerCase()) ||
     modulo.descripcion.toLowerCase().includes(filtroModulo.toLowerCase())
   );
 
-  // Obtener dimensiones reales de la imagen cuando se carga
   const handleImageLoad = () => {
     if (imagenRef.current) {
-      const width = imagenRef.current.naturalWidth;
-      const height = imagenRef.current.naturalHeight;
-      setDimensionesImagen({ width, height });
-      console.log(`📐 Dimensiones reales de la imagen: ${width}x${height}`);
+      setDimensionesImagen({
+        width: imagenRef.current.naturalWidth,
+        height: imagenRef.current.naturalHeight
+      });
     }
   };
 
   const handleMouseMove = (e) => {
     if (!imagenRef.current) return;
-    
     const rect = imagenRef.current.getBoundingClientRect();
-    const xPorcentaje = ((e.clientX - rect.left) / rect.width) * 100;
-    const yPorcentaje = ((e.clientY - rect.top) / rect.height) * 100;
-    
-    // Buscar módulos cercanos al hover
-    const cercanos = modulos.filter(modulo => {
-      const distancia = Math.sqrt(Math.pow(modulo.x - xPorcentaje, 2) + Math.pow(modulo.y - yPorcentaje, 2));
-      return distancia < 8;
-    });
-    setModulosCercanos(cercanos);
-    
-    setHoverCoords({ 
-      x: xPorcentaje, 
-      y: yPorcentaje, 
-      mostrar: true 
-    });
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setHoverCoords({ x, y, mostrar: true });
   };
 
   const handleMouseLeave = () => {
     setHoverCoords({ x: null, y: null, mostrar: false });
-    setModulosCercanos([]);
   };
 
   const handleImagenClick = (e) => {
     if (!imagenRef.current) return;
-    
     const rect = imagenRef.current.getBoundingClientRect();
-    const xPorcentaje = ((e.clientX - rect.left) / rect.width) * 100;
-    const yPorcentaje = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
     
-    setCoordenadasImagen({ 
-      x: xPorcentaje, 
-      y: yPorcentaje,
-    });
+    setCoordenadasImagen({ x, y });
     
-    // Buscar el módulo más cercano
+    // Buscar módulo cercano
     let moduloCercano = null;
     let distanciaMinima = 10;
-    
     for (const modulo of modulos) {
-      const distancia = Math.sqrt(Math.pow(modulo.x - xPorcentaje, 2) + Math.pow(modulo.y - yPorcentaje, 2));
+      const distancia = Math.sqrt(Math.pow(modulo.x - x, 2) + Math.pow(modulo.y - y, 2));
       if (distancia < distanciaMinima) {
         distanciaMinima = distancia;
         moduloCercano = modulo;
@@ -130,15 +107,11 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
         direccion: moduloCercano.nombre,
         descripcion: moduloCercano.descripcion
       });
-      setCoordenadasImagen({ 
-        x: moduloCercano.x, 
-        y: moduloCercano.y,
-      });
+      setCoordenadasImagen({ x: moduloCercano.x, y: moduloCercano.y });
     } else {
       onModuloChange(`Ubicación personalizada`);
       onUbicacionChange({
-        x: xPorcentaje,
-        y: yPorcentaje,
+        x, y,
         direccion: `Ubicación personalizada`,
       });
     }
@@ -146,10 +119,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
 
   const handleModuloSelect = (modulo) => {
     onModuloChange(modulo.nombre);
-    setCoordenadasImagen({ 
-      x: modulo.x, 
-      y: modulo.y,
-    });
+    setCoordenadasImagen({ x: modulo.x, y: modulo.y });
     onUbicacionChange({
       x: modulo.x,
       y: modulo.y,
@@ -170,24 +140,15 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
             {mostrarMapa ? '🔼 Ocultar mapa' : '🗺️ Mostrar mapa del campus'}
           </button>
           {mostrarMapa && (
-            <>
-              <button 
-                type="button" 
-                className="btn btn-outline-secondary btn-sm"
-                onClick={() => setMostrarNombres(!mostrarNombres)}
-              >
-                {mostrarNombres ? '🏷️ Ocultar etiquetas' : '🏷️ Mostrar etiquetas'}
-              </button>
-              <div className="ms-auto" style={{ width: '200px' }}>
-                <input
-                  type="text"
-                  className="form-control form-control-sm"
-                  placeholder="🔍 Buscar módulo..."
-                  value={filtroModulo}
-                  onChange={(e) => setFiltroModulo(e.target.value)}
-                />
-              </div>
-            </>
+            <div className="ms-auto" style={{ width: '200px' }}>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="🔍 Buscar módulo..."
+                value={filtroModulo}
+                onChange={(e) => setFiltroModulo(e.target.value)}
+              />
+            </div>
           )}
         </div>
 
@@ -200,7 +161,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
             >
               <img
                 ref={imagenRef}
-                src="/Fondo/mapacucei.jpg"
+                src="/fondo/mapacucei.jpg"
                 alt="Mapa del campus - Haz clic para seleccionar ubicación"
                 className="mapa-imagen"
                 onClick={handleImagenClick}
@@ -208,46 +169,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                 style={{ cursor: 'crosshair', width: '100%', borderRadius: '12px' }}
               />
               
-              {/* Cursor de hover */}
-              {hoverCoords.mostrar && (
-                <div 
-                  className="mapa-hover"
-                  style={{
-                    left: `${hoverCoords.x}%`,
-                    top: `${hoverCoords.y}%`
-                  }}
-                >
-                  <div className="mapa-hover-punto"></div>
-                  <div className="mapa-hover-etiqueta">
-                    {modulosCercanos.length > 0 ? (
-                      <>
-                        <span>📍 {modulosCercanos[0].nombre}</span>
-                        <span className="mapa-hover-desc">{modulosCercanos[0].descripcion}</span>
-                      </>
-                    ) : (
-                      <span>🖱️ Click para seleccionar</span>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Marcador seleccionado */}
-              {coordenadasImagen.x && coordenadasImagen.y && (
-                <div 
-                  className="mapa-marcador"
-                  style={{
-                    left: `${coordenadasImagen.x}%`,
-                    top: `${coordenadasImagen.y}%`
-                  }}
-                >
-                  <div className="mapa-marcador-punto"></div>
-                  <div className="mapa-marcador-etiqueta">
-                    📍 {moduloSeleccionado || 'Seleccionado'}
-                  </div>
-                </div>
-              )}
-              
-              {/* TODOS LOS MÓDULOS - Puntos visibles en el mapa */}
+              {/* ========== TODOS LOS PUNTOS DE MÓDULOS SIEMPRE VISIBLES ========== */}
               <div className="mapa-modulos-overlay">
                 {modulosFiltrados.map((modulo) => (
                   <div
@@ -263,31 +185,88 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                       handleModuloSelect(modulo);
                     }}
                   >
+                    {/* Punto visible siempre */}
                     <div className="mapa-modulo-punto"></div>
-                    {mostrarNombres && (
-                      <div className="mapa-modulo-etiqueta">
-                        {modulo.nombre}
-                      </div>
-                    )}
+                    
+                    {/* Etiqueta con el nombre - siempre visible */}
+                    <div className="mapa-modulo-etiqueta">
+                      {modulo.nombre}
+                    </div>
+                    
+                    {/* Tooltip con descripción al hacer hover */}
+                    <div className="mapa-modulo-tooltip">
+                      {modulo.descripcion}
+                    </div>
                   </div>
                 ))}
               </div>
+              
+              {/* Cursor de hover (punto amarillo) */}
+              {hoverCoords.mostrar && (
+                <div 
+                  className="mapa-hover"
+                  style={{
+                    left: `${hoverCoords.x}%`,
+                    top: `${hoverCoords.y}%`
+                  }}
+                >
+                  <div className="mapa-hover-punto"></div>
+                </div>
+              )}
+              
+              {/* Marcador de ubicación seleccionada (punto rojo) */}
+              {coordenadasImagen.x && coordenadasImagen.y && (
+                <div 
+                  className="mapa-marcador"
+                  style={{
+                    left: `${coordenadasImagen.x}%`,
+                    top: `${coordenadasImagen.y}%`
+                  }}
+                >
+                  <div className="mapa-marcador-punto"></div>
+                  <div className="mapa-marcador-etiqueta">
+                    📍 {moduloSeleccionado || 'Seleccionado'}
+                  </div>
+                </div>
+              )}
             </div>
             
+            {/* Instrucciones y leyenda */}
             <div className="mapa-instrucciones mt-2">
               <div className="row">
-                <div className="col-md-8">
+                <div className="col-md-7">
                   <small className="text-muted">
                     💡 <strong>Instrucciones:</strong> 
-                    <span> 🔵 Puntos azules = Módulos disponibles</span>
-                    <span> 🟡 Hover = Ver módulo cercano</span>
-                    <span> 🔴 Click = Seleccionar ubicación</span>
+                    <span> 🔵 Puntos azules con nombres = Módulos disponibles</span>
+                    <span> 🖱️ Haz clic en cualquier punto o en el mapa</span>
                   </small>
                 </div>
-                <div className="col-md-4 text-end">
+                <div className="col-md-5 text-end">
                   <small className="text-muted">
                     <strong>Total módulos:</strong> {modulosFiltrados.length}
                   </small>
+                </div>
+              </div>
+            </div>
+
+            {/* Leyenda de colores */}
+            <div className="mapa-leyenda mt-2">
+              <div className="d-flex gap-4 flex-wrap justify-content-center">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="mapa-leyenda-punto" style={{ backgroundColor: '#1877f2' }}></div>
+                  <small>Módulo disponible</small>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <div className="mapa-leyenda-punto" style={{ backgroundColor: '#28a745' }}></div>
+                  <small>Módulo seleccionado</small>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <div className="mapa-leyenda-punto" style={{ backgroundColor: '#ffc107' }}></div>
+                  <small>Posición del mouse</small>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <div className="mapa-leyenda-punto" style={{ backgroundColor: '#dc3545' }}></div>
+                  <small>Ubicación seleccionada</small>
                 </div>
               </div>
             </div>
@@ -329,30 +308,6 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
             )}
           </div>
         </div>
-
-        {/* Leyenda del mapa */}
-        {mostrarMapa && (
-          <div className="mapa-leyenda mt-3">
-            <div className="d-flex gap-3 flex-wrap">
-              <div className="d-flex align-items-center gap-1">
-                <div className="mapa-leyenda-punto" style={{ backgroundColor: '#1877f2' }}></div>
-                <small>Módulo disponible</small>
-              </div>
-              <div className="d-flex align-items-center gap-1">
-                <div className="mapa-leyenda-punto" style={{ backgroundColor: '#ffc107' }}></div>
-                <small>Posición del mouse</small>
-              </div>
-              <div className="d-flex align-items-center gap-1">
-                <div className="mapa-leyenda-punto" style={{ backgroundColor: '#dc3545' }}></div>
-                <small>Ubicación seleccionada</small>
-              </div>
-              <div className="d-flex align-items-center gap-1">
-                <div className="mapa-leyenda-punto" style={{ backgroundColor: '#28a745' }}></div>
-                <small>Módulo seleccionado</small>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
