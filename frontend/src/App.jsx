@@ -96,7 +96,6 @@ function App() {
     );
   };
 
-  // Renderizar según la sección activa (después de login)
   const renderContent = () => {
     switch(activeSection) {
       case 'inicio':
@@ -107,7 +106,7 @@ function App() {
             <p className="text-muted">Selecciona una opción del menú para comenzar</p>
             <div className="row g-3 mt-4 justify-content-center">
               <div className="col-md-4">
-                <Card className="h-100 shadow-sm border-0" style={{ cursor: 'pointer' }} onClick={() => setActiveSection('crear')}>
+                <Card className="card-custom cursor-pointer" onClick={() => setActiveSection('crear')}>
                   <Card.Body className="text-center">
                     <Camera size={40} className="text-primary mb-2" />
                     <h5>Hacer Reporte</h5>
@@ -116,7 +115,7 @@ function App() {
                 </Card>
               </div>
               <div className="col-md-4">
-                <Card className="h-100 shadow-sm border-0" style={{ cursor: 'pointer' }} onClick={() => setActiveSection('ver')}>
+                <Card className="card-custom cursor-pointer" onClick={() => setActiveSection('ver')}>
                   <Card.Body className="text-center">
                     <List size={40} className="text-primary mb-2" />
                     <h5>Ver Reportes</h5>
@@ -129,25 +128,25 @@ function App() {
         );
       case 'crear':
         return (
-          <Card className="shadow-sm border-0">
+          <Card className="card-custom">
             <Card.Body>
-              <Card.Title className="mb-4">
-                <Camera className="me-2 text-primary" /> Hacer Reporte
-              </Card.Title>
+              <h4 className="card-title-custom">
+                <Camera className="me-2" /> Hacer Reporte
+              </h4>
               <ReporteForm usuario={usuario} onReporteCreado={cargarReportes} mostrarAlerta={mostrarAlerta} />
             </Card.Body>
           </Card>
         );
       case 'ver':
         return (
-          <Card className="shadow-sm border-0">
+          <Card className="card-custom">
             <Card.Body>
-              <Card.Title className="mb-4">
-                <List className="me-2 text-primary" /> Ver Reportes
-              </Card.Title>
+              <h4 className="card-title-custom">
+                <List className="me-2" /> Ver Reportes
+              </h4>
               {cargandoReportes ? (
-                <div className="text-center py-5">
-                  <Spinner animation="border" variant="primary" />
+                <div className="spinner-container">
+                  <div className="spinner"></div>
                   <p className="mt-3 text-muted">Cargando reportes...</p>
                 </div>
               ) : (
@@ -161,38 +160,34 @@ function App() {
     }
   };
 
-  // ========== PANTALLA DE LOGIN/REGISTRO (CON CSS) ==========
+  // Pantalla de login/registro
   if (!usuario) {
     return (
-      <div className="login-fondo">
-        <Container className="contenido-login">
-          {/* Barra superior */}
-          <Navbar bg="white" expand="lg" className="mb-4 rounded-3 shadow-sm">
+      <div className="login-container">
+        <Container className="login-content">
+          <Navbar bg="white" expand="lg" className="navbar-custom">
             <Container fluid>
-              <Navbar.Brand className="fw-bold text-primary">
+              <Navbar.Brand className="navbar-brand-custom">
                 <Camera className="me-2" /> Reportes IA
                 <ServerStatusBadge />
               </Navbar.Brand>
             </Container>
           </Navbar>
 
-          {/* Título */}
-          <div className="text-center text-white mb-4">
-            <h1 className="display-4 fw-bold text-shadow">📸 Sistema de Reportes con IA</h1>
-            <p className="lead text-shadow">Sube una imagen y la IA analizará el problema automáticamente</p>
+          <div className="header-title">
+            <h1>📸 Sistema de Reportes con IA</h1>
+            <p>Sube una imagen y la IA analizará el problema automáticamente</p>
           </div>
 
-          {/* Alertas */}
           <AlertMessage />
 
-          {/* Formulario de login/registro */}
           <Row className="justify-content-center">
             <Col lg={6} md={8}>
-              <Card className="shadow-sm border-0 card-login">
+              <Card className="card-login">
                 <Card.Body>
-                  <Card.Title className="mb-4 text-center">
-                    <Person className="me-2 text-primary" /> Acceso al Sistema
-                  </Card.Title>
+                  <h4 className="card-title-custom justify-content-center">
+                    <Person className="me-2" /> Acceso al Sistema
+                  </h4>
                   <Tabs
                     activeKey={activeTab}
                     onSelect={(k) => setActiveTab(k)}
@@ -211,8 +206,7 @@ function App() {
             </Col>
           </Row>
 
-          {/* Footer */}
-          <footer className="text-center text-white mt-5 pt-3">
+          <footer className="footer">
             <small>© 2026 Reportes IA - Todos los derechos reservados</small>
           </footer>
         </Container>
@@ -220,44 +214,43 @@ function App() {
     );
   }
 
-  // ========== PANTALLA PRINCIPAL (CON MENÚ LATERAL) ==========
+  // Pantalla principal después de login
   return (
-    <div className="fondo-principal">
-      {/* Barra superior */}
-      <Navbar bg="white" expand="lg" className="shadow-sm px-3 py-2 sticky-navbar">
+    <div className="main-container">
+      <div className="sticky-navbar">
         <Container fluid>
-          <Navbar.Brand className="fw-bold text-primary">
-            <Camera className="me-2" /> Reportes IA
-            <ServerStatusBadge />
-          </Navbar.Brand>
-          <div className="d-flex align-items-center gap-3">
-            <span className="text-muted">👤 {usuario}</span>
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="navbar-brand-custom">
+              <Camera className="me-2" /> Reportes IA
+              <ServerStatusBadge />
+            </div>
+            <div className="navbar-user">
+              <span className="user-name">👤 {usuario}</span>
+            </div>
           </div>
         </Container>
-      </Navbar>
+      </div>
 
-      {/* Alertas */}
       <AlertMessage />
 
-      {/* Contenido principal con menú lateral */}
       <Container fluid>
-        <Row>
-          {/* Menú lateral */}
-          <MenuLateral 
-            activeSection={activeSection}
-            onSelectSection={setActiveSection}
-            usuario={usuario}
-            onLogout={handleLogout}
-          />
+        <div className="row">
+          <div className="col-md-3 col-lg-2 p-0">
+            <MenuLateral 
+              activeSection={activeSection}
+              onSelectSection={setActiveSection}
+              usuario={usuario}
+              onLogout={handleLogout}
+            />
+          </div>
 
-          {/* Contenido dinámico */}
-          <Col md={9} className="p-4">
+          <div className="col-md-9 col-lg-10 p-4">
             {renderContent()}
-            <footer className="text-center text-muted mt-5 pt-3">
-              <small>Sistema de Reportes con IA v1.0 | {reportes.length} reporte{reportes.length !== 1 ? 's' : ''} en total</small>
+            <footer className="footer footer-light mt-5 pt-3">
+              <small>Reportes IA v1.0 | {reportes.length} reporte{reportes.length !== 1 ? 's' : ''} en total</small>
             </footer>
-          </Col>
-        </Row>
+          </div>
+        </div>
       </Container>
     </div>
   );

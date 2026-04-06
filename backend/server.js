@@ -354,6 +354,74 @@ app.get("/api/debug/ultimo-reporte", (req, res) => {
     });
 });
 
+// ========== RESPUESTAS A COMENTARIOS ==========
+// Tabla de respuestas
+db.run(`
+    CREATE TABLE IF NOT EXISTS respuestas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        comentario_id INTEGER NOT NULL,
+        usuario TEXT NOT NULL,
+        texto TEXT NOT NULL,
+        fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+        likes INTEGER DEFAULT 0,
+        FOREIGN KEY (comentario_id) REFERENCES comentarios(id) ON DELETE CASCADE
+    )
+`, (err) => {
+    if (err) console.error("Error creando tabla respuestas:", err);
+    else console.log("✅ Tabla 'respuestas' lista");
+});
+
+// Obtener respuestas de un comentario
+app.get("/api/respuestas/:comentarioId", (req, res) => {
+    const { comentarioId } = req.params;
+    db.all(
+        "SELECT * FROM respuestas WHERE comentario_id = ? ORDER BY fecha ASC",
+        [comentarioId],
+        (err, rows) => {
+            if (err) return res.status(500).json({ mensaje: "Error al obtener respuestas", success: false });
+            res.json(rows || []);
+        }
+    );
+});
+
+// Agregar respuesta a un comentario
+app.post("/api/respuestas", (req, res) => {
+    const { comentarioId, usuario, texto } = req.body;
+
+    if (!comentarioId || !usuario || !texto) {
+        return res.status(400).json({ mensaje: "Faltan datos", success: false });
+    }
+
+    db.run(
+        "INSERT INTO respuestas (comentario_id, usuario, texto) VALUES (?, ?, ?)",
+        [comentarioId, usuario, texto],
+        function(err) {
+            if (err) return res.status(500).json({ mensaje: "Error al guardar respuesta", success: false });
+            res.json({
+                mensaje: "Respuesta agregada",
+                success: true,
+                respuesta: {
+                    id: this.lastID,
+                    comentario_id: comentarioId,
+                    usuario,
+                    texto,
+                    fecha: new Date().toISOString(),
+                    likes: 0
+                }
+            });
+        }
+    );
+});
+
+// Dar like a una respuesta
+app.post("/api/respuestas/:id/like", (req, res) => {
+    const { id } = req.params;
+    db.run("UPDATE respuestas SET likes = likes + 1 WHERE id = ?", [id], function(err) {
+        if (err) return res.status(500).json({ mensaje: "Error al dar like", success: false });
+        res.json({ mensaje: "Like agregado", success: true });
+    });
+});
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`\n🚀 Backend en puerto ${PORT}`);
