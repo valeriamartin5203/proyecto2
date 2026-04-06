@@ -1,84 +1,106 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSeleccionado, onModuloChange }) {
   const [coordenadasImagen, setCoordenadasImagen] = useState({ x: null, y: null });
   const [mostrarMapa, setMostrarMapa] = useState(false);
   const [hoverCoords, setHoverCoords] = useState({ x: null, y: null, mostrar: false });
-  const [dimensionesImagen, setDimensionesImagen] = useState({ width: 0, height: 0 });
   const [filtroModulo, setFiltroModulo] = useState('');
   const imagenRef = useRef(null);
-  const containerRef = useRef(null);
+  const hoverTimeoutRef = useRef(null);
 
-  // Módulos predefinidos con coordenadas
-  const modulos = [
-    { id: 'A', nombre: 'Módulo A', x: 10, y: 20, descripcion: 'Edificio principal' },
-    { id: 'B', nombre: 'Módulo B', x: 15, y: 25, descripcion: 'Biblioteca' },
-    { id: 'C', nombre: 'Módulo C', x: 20, y: 30, descripcion: 'Cafetería' },
-    { id: 'D', nombre: 'Módulo D', x: 25, y: 35, descripcion: 'Auditorio' },
-    { id: 'E', nombre: 'Módulo E', x: 30, y: 40, descripcion: 'Laboratorios' },
-    { id: 'F', nombre: 'Módulo F', x: 35, y: 45, descripcion: 'Salones' },
-    { id: 'G', nombre: 'Módulo G', x: 40, y: 50, descripcion: 'Gimnasio' },
-    { id: 'H', nombre: 'Módulo H', x: 45, y: 55, descripcion: 'Estacionamiento' },
-    { id: 'I', nombre: 'Módulo I', x: 50, y: 60, descripcion: 'Área administrativa' },
-    { id: 'J', nombre: 'Módulo J', x: 55, y: 65, descripcion: 'Talleres' },
-    { id: 'K', nombre: 'Módulo K', x: 60, y: 70, descripcion: 'Área verde' },
-    { id: 'L', nombre: 'Módulo L', x: 65, y: 75, descripcion: 'Canchas' },
-    { id: 'M', nombre: 'Módulo M', x: 70, y: 80, descripcion: 'Laboratorio de cómputo' },
-    { id: 'N', nombre: 'Módulo N', x: 75, y: 85, descripcion: 'Sala de juntas' },
-    { id: 'O', nombre: 'Módulo O', x: 80, y: 90, descripcion: 'Área de descanso' },
-    { id: 'P', nombre: 'Módulo P', x: 85, y: 95, descripcion: 'Salida principal' },
-    { id: 'Q', nombre: 'Módulo Q', x: 12, y: 22, descripcion: 'Control escolar' },
-    { id: 'R', nombre: 'Módulo R', x: 18, y: 28, descripcion: 'Oficinas' },
-    { id: 'S', nombre: 'Módulo S', x: 22, y: 32, descripcion: 'Enfermería' },
-    { id: 'T', nombre: 'Módulo T', x: 28, y: 38, descripcion: 'Psicología' },
-    { id: 'U', nombre: 'Módulo U', x: 32, y: 42, descripcion: 'Tutorías' },
-    { id: 'V', nombre: 'Módulo V', x: 38, y: 48, descripcion: 'Vinculación' },
-    { id: 'W', nombre: 'Módulo W', x: 42, y: 52, descripcion: 'Idiomas' },
-    { id: 'X', nombre: 'Módulo X', x: 48, y: 58, descripcion: 'Internacional' },
-    { id: 'Y', nombre: 'Módulo Y', x: 52, y: 62, descripcion: 'Emprendedores' },
-    { id: 'Z', nombre: 'Módulo Z', x: 58, y: 68, descripcion: 'Incubadora' },
-    { id: 'Z1', nombre: 'Zona 1', x: 62, y: 72, descripcion: 'Área de carga' },
-    { id: 'Z2', nombre: 'Zona 2', x: 68, y: 78, descripcion: 'Mantenimiento' },
-    { id: 'V2', nombre: 'Vestíbulo 2', x: 72, y: 82, descripcion: 'Entrada secundaria' },
-    { id: 'ALPHA', nombre: 'Edificio Alpha', x: 78, y: 88, descripcion: 'Tecnología' },
-    { id: 'BETA', nombre: 'Edificio Beta', x: 82, y: 92, descripcion: 'Innovación' },
-    { id: 'L2', nombre: 'Laboratorio 2', x: 8, y: 15, descripcion: 'Química' },
-    { id: 'JOBS', nombre: 'Área Jobs', x: 14, y: 18, descripcion: 'Empleabilidad' },
-    { id: 'santander', nombre: 'Edificio Santander', x: 24, y: 34, descripcion: 'Financiero' },
-    { id: 'lona', nombre: 'Zona de la Lona', x: 34, y: 44, descripcion: 'Eventos' },
-    { id: 'zona_alimentos_p', nombre: 'Zona Alimentos P', x: 44, y: 54, descripcion: 'Comida rápida' },
-    { id: 'zona_alimentos_x', nombre: 'Zona Alimentos X', x: 54, y: 64, descripcion: 'Restaurantes' },
-    { id: 'zona_alimentos_t', nombre: 'Zona Alimentos T', x: 64, y: 74, descripcion: 'Cafetería' },
-    { id: 'zona_alimentos_j', nombre: 'Zona Alimentos J', x: 74, y: 84, descripcion: 'Snacks' },
-    { id: 'banos', nombre: 'Baños', x: 84, y: 94, descripcion: 'Sanitarios' },
-    { id: 'laboratorio_ingenieria', nombre: 'Laboratorio de Ingeniería', x: 5, y: 10, descripcion: 'Ingeniería' }
-  ];
+  // Módulos del CUCEI con coordenadas ajustadas al mapa
+  const modulos = useMemo(() => [
+    // Edificios principales (parte superior)
+    { id: 'A', nombre: 'Módulo A', x: 15, y: 25, descripcion: 'Edificio A - Ciencias Básicas' },
+    { id: 'B', nombre: 'Módulo B', x: 22, y: 28, descripcion: 'Edificio B - Matemáticas' },
+    { id: 'C', nombre: 'Módulo C', x: 29, y: 31, descripcion: 'Edificio C - Física' },
+    { id: 'D', nombre: 'Módulo D', x: 36, y: 34, descripcion: 'Edificio D - Química' },
+    { id: 'E', nombre: 'Módulo E', x: 43, y: 37, descripcion: 'Edificio E - Biología' },
+    { id: 'F', nombre: 'Módulo F', x: 50, y: 40, descripcion: 'Edificio F - Computación' },
+    { id: 'G', nombre: 'Módulo G', x: 57, y: 43, descripcion: 'Edificio G - Electrónica' },
+    { id: 'H', nombre: 'Módulo H', x: 64, y: 46, descripcion: 'Edificio H - Mecánica' },
+    { id: 'I', nombre: 'Módulo I', x: 71, y: 49, descripcion: 'Edificio I - Civil' },
+    { id: 'J', nombre: 'Módulo J', x: 78, y: 52, descripcion: 'Edificio J - Industrial' },
+    { id: 'K', nombre: 'Módulo K', x: 85, y: 55, descripcion: 'Edificio K - Ambiental' },
+    { id: 'L', nombre: 'Módulo L', x: 20, y: 60, descripcion: 'Edificio L - Laboratorios' },
+    { id: 'M', nombre: 'Módulo M', x: 30, y: 65, descripcion: 'Edificio M - Talleres' },
+    { id: 'N', nombre: 'Módulo N', x: 40, y: 70, descripcion: 'Edificio N - Investigación' },
+    { id: 'O', nombre: 'Módulo O', x: 50, y: 75, descripcion: 'Edificio O - Posgrados' },
+    { id: 'P', nombre: 'Módulo P', x: 60, y: 80, descripcion: 'Edificio P - Biblioteca' },
+    { id: 'Q', nombre: 'Módulo Q', x: 70, y: 85, descripcion: 'Edificio Q - Aulas' },
+    { id: 'R', nombre: 'Módulo R', x: 80, y: 90, descripcion: 'Edificio R - Seminarios' },
+    { id: 'S', nombre: 'Módulo S', x: 10, y: 35, descripcion: 'Servicios Escolares' },
+    { id: 'T', nombre: 'Módulo T', x: 18, y: 42, descripcion: 'Control Escolar' },
+    { id: 'U', nombre: 'Módulo U', x: 26, y: 49, descripcion: 'Unidad de Posgrado' },
+    { id: 'V', nombre: 'Módulo V', x: 34, y: 56, descripcion: 'Vinculación' },
+    { id: 'W', nombre: 'Módulo W', x: 42, y: 63, descripcion: 'Idiomas' },
+    { id: 'X', nombre: 'Módulo X', x: 50, y: 20, descripcion: 'Área de Gobierno' },
+    { id: 'Y', nombre: 'Módulo Y', x: 58, y: 25, descripcion: 'Rectoría' },
+    { id: 'Z', nombre: 'Módulo Z', x: 66, y: 30, descripcion: 'Planeación' },
+    
+    // Zonas especiales
+    { id: 'Z1', nombre: 'Zona 1', x: 75, y: 35, descripcion: 'Estacionamiento 1' },
+    { id: 'Z2', nombre: 'Zona 2', x: 85, y: 40, descripcion: 'Estacionamiento 2' },
+    { id: 'V2', nombre: 'Vestíbulo 2', x: 45, y: 45, descripcion: 'Vestíbulo principal' },
+    { id: 'ALPHA', nombre: 'Alpha', x: 55, y: 50, descripcion: 'Edificio Alpha - Laboratorios' },
+    { id: 'BETA', nombre: 'Beta', x: 65, y: 55, descripcion: 'Edificio Beta - Tecnología' },
+    { id: 'L2', nombre: 'Laboratorio 2', x: 35, y: 60, descripcion: 'Laboratorio de Ingenierías' },
+    { id: 'JOBS', nombre: 'JOBS', x: 25, y: 65, descripcion: 'Bolsa de trabajo' },
+    { id: 'santander', nombre: 'Santander', x: 15, y: 70, descripcion: 'Cajero Santander' },
+    { id: 'lona', nombre: 'Lona', x: 5, y: 75, descripcion: 'Área de la Lona - Eventos' },
+    
+    // Zonas de alimentos
+    { id: 'zona_alimentos_p', nombre: 'Zona Alimentos P', x: 12, y: 80, descripcion: 'Cafetería P' },
+    { id: 'zona_alimentos_x', nombre: 'Zona Alimentos X', x: 22, y: 85, descripcion: 'Comida rápida' },
+    { id: 'zona_alimentos_t', nombre: 'Zona Alimentos T', x: 32, y: 90, descripcion: 'Tortas y snacks' },
+    { id: 'zona_alimentos_j', nombre: 'Zona Alimentos J', x: 42, y: 95, descripcion: 'Jugos y frutas' },
+    
+    // Servicios
+    { id: 'banos', nombre: 'Baños', x: 48, y: 98, descripcion: 'Sanitarios generales' },
+    { id: 'laboratorio_ingenieria', nombre: 'Lab. Ingeniería', x: 38, y: 55, descripcion: 'Laboratorio de Ingenierías' },
+    { id: 'biblioteca', nombre: 'Biblioteca', x: 52, y: 52, descripcion: 'Biblioteca Central' },
+    { id: 'auditorios', nombre: 'Auditorios', x: 62, y: 48, descripcion: 'Auditorio principal' },
+    { id: 'medico', nombre: 'Médico', x: 72, y: 44, descripcion: 'Servicio médico' },
+    { id: 'servicios_generales', nombre: 'Servicios Generales', x: 82, y: 40, descripcion: 'Mantenimiento' },
+    { id: 'papeleria', nombre: 'Papelería', x: 28, y: 35, descripcion: 'Papelería' },
+    { id: 'cafeteria', nombre: 'Cafetería', x: 18, y: 30, descripcion: 'Cafetería central' },
+    { id: 'linea3', nombre: 'Línea 3', x: 8, y: 25, descripcion: 'Estación Línea 3' },
+    { id: 'cid', nombre: 'CID', x: 48, y: 28, descripcion: 'Centro de Investigación' },
+    { id: 'jardines', nombre: 'Jardines', x: 58, y: 22, descripcion: 'Áreas verdes' },
+    { id: 'explanadas', nombre: 'Explanadas', x: 68, y: 18, descripcion: 'Zonas de esparcimiento' },
+    
+    // Accesos
+    { id: 'acceso_principal', nombre: 'Acceso Principal', x: 50, y: 10, descripcion: 'Registro facial - Entrada principal' },
+    { id: 'acceso_secundario', nombre: 'Acceso Secundario', x: 80, y: 15, descripcion: 'Entrada por Calzada' },
+    { id: 'acceso_revolucion', nombre: 'Acceso Revolución', x: 10, y: 5, descripcion: 'Entrada por Calz. Revolución' }
+  ], []);
 
-  const modulosFiltrados = modulos.filter(modulo =>
-    modulo.nombre.toLowerCase().includes(filtroModulo.toLowerCase()) ||
-    modulo.descripcion.toLowerCase().includes(filtroModulo.toLowerCase())
-  );
+  // Filtrar módulos
+  const modulosFiltrados = useMemo(() => {
+    if (!filtroModulo) return modulos;
+    return modulos.filter(modulo =>
+      modulo.nombre.toLowerCase().includes(filtroModulo.toLowerCase()) ||
+      modulo.descripcion.toLowerCase().includes(filtroModulo.toLowerCase())
+    );
+  }, [modulos, filtroModulo]);
 
-  const handleImageLoad = () => {
-    if (imagenRef.current) {
-      setDimensionesImagen({
-        width: imagenRef.current.naturalWidth,
-        height: imagenRef.current.naturalHeight
-      });
-    }
-  };
-
-  const handleMouseMove = (e) => {
+  const handleMouseMove = useCallback((e) => {
     if (!imagenRef.current) return;
-    const rect = imagenRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setHoverCoords({ x, y, mostrar: true });
-  };
+    
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    
+    hoverTimeoutRef.current = setTimeout(() => {
+      const rect = imagenRef.current.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setHoverCoords({ x, y, mostrar: true });
+    }, 10);
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setHoverCoords({ x: null, y: null, mostrar: false });
-  };
+  }, []);
 
   const handleImagenClick = (e) => {
     if (!imagenRef.current) return;
@@ -88,9 +110,9 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
     
     setCoordenadasImagen({ x, y });
     
-    // Buscar módulo cercano
+    // Buscar módulo más cercano
     let moduloCercano = null;
-    let distanciaMinima = 10;
+    let distanciaMinima = 8;
     for (const modulo of modulos) {
       const distancia = Math.sqrt(Math.pow(modulo.x - x, 2) + Math.pow(modulo.y - y, 2));
       if (distancia < distanciaMinima) {
@@ -99,7 +121,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
       }
     }
     
-    if (moduloCercano && distanciaMinima < 8) {
+    if (moduloCercano) {
       onModuloChange(moduloCercano.nombre);
       onUbicacionChange({
         x: moduloCercano.x,
@@ -129,7 +151,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
   };
 
   return (
-    <div className="mapa-imagen-selector" ref={containerRef}>
+    <div className="mapa-imagen-selector">
       <div className="mb-3">
         <div className="d-flex gap-2 mb-3 flex-wrap">
           <button 
@@ -137,14 +159,14 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
             className="btn btn-primary btn-sm"
             onClick={() => setMostrarMapa(!mostrarMapa)}
           >
-            {mostrarMapa ? '🔼 Ocultar mapa' : '🗺️ Mostrar mapa del campus'}
+            {mostrarMapa ? '🔼 Ocultar mapa' : '🗺️ Mostrar mapa del CUCEI'}
           </button>
           {mostrarMapa && (
-            <div className="ms-auto" style={{ width: '200px' }}>
+            <div className="ms-auto" style={{ width: '250px' }}>
               <input
                 type="text"
                 className="form-control form-control-sm"
-                placeholder="🔍 Buscar módulo..."
+                placeholder="🔍 Buscar módulo (A, B, Biblioteca, etc)..."
                 value={filtroModulo}
                 onChange={(e) => setFiltroModulo(e.target.value)}
               />
@@ -161,15 +183,14 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
             >
               <img
                 ref={imagenRef}
-                src="/Fondo/mapacucei.jpg"
-                alt="Mapa del campus - Haz clic para seleccionar ubicación"
+                src="/images/mapacucei.jpg"
+                alt="Mapa del CUCEI - Haz clic para seleccionar ubicación"
                 className="mapa-imagen"
                 onClick={handleImagenClick}
-                onLoad={handleImageLoad}
                 style={{ cursor: 'crosshair', width: '100%', borderRadius: '12px' }}
               />
               
-              {/* ========== TODOS LOS PUNTOS DE MÓDULOS SIEMPRE VISIBLES ========== */}
+              {/* Todos los puntos de módulos siempre visibles */}
               <div className="mapa-modulos-overlay">
                 {modulosFiltrados.map((modulo) => (
                   <div
@@ -185,15 +206,10 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                       handleModuloSelect(modulo);
                     }}
                   >
-                    {/* Punto visible siempre */}
                     <div className="mapa-modulo-punto"></div>
-                    
-                    {/* Etiqueta con el nombre - siempre visible */}
                     <div className="mapa-modulo-etiqueta">
                       {modulo.nombre}
                     </div>
-                    
-                    {/* Tooltip con descripción al hacer hover */}
                     <div className="mapa-modulo-tooltip">
                       {modulo.descripcion}
                     </div>
@@ -201,7 +217,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                 ))}
               </div>
               
-              {/* Cursor de hover (punto amarillo) */}
+              {/* Punto de hover */}
               {hoverCoords.mostrar && (
                 <div 
                   className="mapa-hover"
@@ -214,7 +230,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                 </div>
               )}
               
-              {/* Marcador de ubicación seleccionada (punto rojo) */}
+              {/* Marcador seleccionado */}
               {coordenadasImagen.x && coordenadasImagen.y && (
                 <div 
                   className="mapa-marcador"
@@ -231,34 +247,31 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
               )}
             </div>
             
-            {/* Instrucciones y leyenda */}
             <div className="mapa-instrucciones mt-2">
               <div className="row">
                 <div className="col-md-7">
                   <small className="text-muted">
-                    💡 <strong>Instrucciones:</strong> 
-                    <span> 🔵 Puntos azules con nombres = Módulos disponibles</span>
-                    <span> 🖱️ Haz clic en cualquier punto o en el mapa</span>
+                    💡 <strong>Mapa del CUCEI</strong> - Haz clic en cualquier punto azul o en el mapa para seleccionar ubicación
                   </small>
                 </div>
                 <div className="col-md-5 text-end">
                   <small className="text-muted">
-                    <strong>Total módulos:</strong> {modulosFiltrados.length}
+                    <strong>Total ubicaciones:</strong> {modulosFiltrados.length}
                   </small>
                 </div>
               </div>
             </div>
 
-            {/* Leyenda de colores */}
+            {/* Leyenda */}
             <div className="mapa-leyenda mt-2">
               <div className="d-flex gap-4 flex-wrap justify-content-center">
                 <div className="d-flex align-items-center gap-2">
                   <div className="mapa-leyenda-punto" style={{ backgroundColor: '#1877f2' }}></div>
-                  <small>Módulo disponible</small>
+                  <small>Ubicación disponible</small>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <div className="mapa-leyenda-punto" style={{ backgroundColor: '#28a745' }}></div>
-                  <small>Módulo seleccionado</small>
+                  <small>Seleccionado</small>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <div className="mapa-leyenda-punto" style={{ backgroundColor: '#ffc107' }}></div>
@@ -266,7 +279,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <div className="mapa-leyenda-punto" style={{ backgroundColor: '#dc3545' }}></div>
-                  <small>Ubicación seleccionada</small>
+                  <small>Ubicación marcada</small>
                 </div>
               </div>
             </div>
@@ -275,7 +288,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
 
         <div className="row mt-3">
           <div className="col-md-6">
-            <label className="form-label">📍 Selecciona un módulo de la lista:</label>
+            <label className="form-label">📍 Selecciona una ubicación:</label>
             <select 
               className="form-select"
               value={moduloSeleccionado || ''}
@@ -284,7 +297,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                 if (modulo) handleModuloSelect(modulo);
               }}
             >
-              <option value="">-- Selecciona un módulo --</option>
+              <option value="">-- Selecciona --</option>
               {modulos.map((modulo) => (
                 <option key={modulo.id} value={modulo.nombre}>
                   {modulo.nombre} - {modulo.descripcion}
@@ -299,7 +312,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
               className="form-input" 
               value={ubicacionSeleccionada?.direccion || moduloSeleccionado || ''}
               readOnly
-              placeholder="Haz clic en el mapa o selecciona un módulo"
+              placeholder="Haz clic en el mapa o selecciona una ubicación"
             />
             {ubicacionSeleccionada?.descripcion && (
               <small className="text-muted d-block mt-1">
