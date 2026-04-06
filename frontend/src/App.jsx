@@ -161,11 +161,11 @@ function App() {
     }
   };
 
-  // ========== PANTALLA DE LOGIN/REGISTRO (CON IMAGEN LOCAL DE BIENVENIDA) ==========
+  // ========== PANTALLA DE LOGIN/REGISTRO (CON CSS) ==========
   if (!usuario) {
     return (
-      <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', minHeight: '100vh', padding: '20px 0' }}>
-        <Container>
+      <div className="login-fondo">
+        <Container className="contenido-login">
           {/* Barra superior */}
           <Navbar bg="white" expand="lg" className="mb-4 rounded-3 shadow-sm">
             <Container fluid>
@@ -176,20 +176,10 @@ function App() {
             </Container>
           </Navbar>
 
-          {/* ========== IMAGEN DE BIENVENIDA (LOCAL) ========== */}
-          <div className="text-center mb-4">
-            <img 
-              src="/Fondo/cucei.jpg" 
-              alt="Bienvenido a Reportes IA"
-              className="img-fluid"
-              style={{ maxHeight: '150px' }}
-            />
-          </div>
-
           {/* Título */}
           <div className="text-center text-white mb-4">
-            <h1 className="display-4 fw-bold">📸 Sistema de Reportes con IA</h1>
-            <p className="lead">Sube una imagen y la IA analizará el problema automáticamente</p>
+            <h1 className="display-4 fw-bold text-shadow">📸 Sistema de Reportes con IA</h1>
+            <p className="lead text-shadow">Sube una imagen y la IA analizará el problema automáticamente</p>
           </div>
 
           {/* Alertas */}
@@ -198,7 +188,7 @@ function App() {
           {/* Formulario de login/registro */}
           <Row className="justify-content-center">
             <Col lg={6} md={8}>
-              <Card className="shadow-sm border-0">
+              <Card className="shadow-sm border-0 card-login">
                 <Card.Body>
                   <Card.Title className="mb-4 text-center">
                     <Person className="me-2 text-primary" /> Acceso al Sistema
@@ -232,9 +222,9 @@ function App() {
 
   // ========== PANTALLA PRINCIPAL (CON MENÚ LATERAL) ==========
   return (
-    <div style={{ background: '#f0f2f5', minHeight: '100vh' }}>
+    <div className="fondo-principal">
       {/* Barra superior */}
-      <Navbar bg="white" expand="lg" className="shadow-sm px-3 py-2" style={{ position: 'sticky', top: 0, zIndex: 1000 }}>
+      <Navbar bg="white" expand="lg" className="shadow-sm px-3 py-2 sticky-navbar">
         <Container fluid>
           <Navbar.Brand className="fw-bold text-primary">
             <Camera className="me-2" /> Reportes IA

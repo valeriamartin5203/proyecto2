@@ -288,3 +288,166 @@
     object-fit: cover;
   }
 }
+
+/* ========== PANTALLA DE LOGIN CON IMAGEN DE FONDO ========== */
+.login-fondo {
+  background-image: url('/Fondo/cucei.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Capa oscura sobre la imagen */
+.login-fondo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+
+.contenido-login {
+  position: relative;
+  z-index: 1;
+  padding: 20px 0;
+}
+
+/* Sombra de texto para mejor legibilidad */
+.text-shadow {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Card semi-transparente */
+.card-login {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: none;
+}
+
+/* ========== PANTALLA PRINCIPAL ========== */
+.fondo-principal {
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* Navbar fijo */
+.sticky-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* ========== ESTILOS DEL MENÚ ========== */
+.active-menu {
+  background-color: #e7f3ff !important;
+  color: #1877f2 !important;
+  font-weight: bold;
+}
+
+.nav-link:hover:not(.active-menu) {
+  background-color: #f0f2f5;
+  border-radius: 8px;
+}
+
+.nav-link {
+  transition: all 0.2s ease;
+}
+
+/* ========== REPORTES ========== */
+.reporte-imagen-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.reporte-imagen-container img {
+  transition: transform 0.3s ease;
+  width: 100%;
+  height: auto;
+}
+
+.reporte-imagen-container:hover img {
+  transform: scale(1.02);
+}
+
+.imagen-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: white;
+}
+
+.reporte-imagen-container:hover .imagen-overlay {
+  opacity: 1;
+}
+
+/* Scrollbar personalizada */
+.reportes-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reportes-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.reportes-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.reportes-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reporte-item {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Confeti */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  animation: confettiFall 1s ease-out forwards;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 2px;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(300px) rotate(360deg);
+    opacity: 0;
+  }
+}
