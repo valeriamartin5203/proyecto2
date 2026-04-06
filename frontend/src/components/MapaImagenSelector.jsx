@@ -161,7 +161,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
             >
               <img
                 ref={imagenRef}
-                src="/fondo/mapacucei.jpg"
+                src="/Fondo/mapacucei.jpg"
                 alt="Mapa del campus - Haz clic para seleccionar ubicación"
                 className="mapa-imagen"
                 onClick={handleImagenClick}
