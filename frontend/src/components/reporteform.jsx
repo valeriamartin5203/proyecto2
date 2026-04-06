@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Form, Button, Spinner } from 'react-bootstrap';
 import { Camera } from 'react-bootstrap-icons';
 import api from '../services/api';
-import MapaImagenSelector from './MapaImagenSelector'; // Importar el nuevo componente
+import MapaImagenSelector from './MapaImagenSelector';
 
+// Lista de módulos respaldo (por si no se usa el mapa)
 const MODULOS = [
   "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
   "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
@@ -20,7 +21,7 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
   const [imagen, setImagen] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [usarMapa, setUsarMapa] = useState(false);
+  const [usarMapa, setUsarMapa] = useState(true); // Por defecto usar mapa
 
   const handleImagenChange = (e) => {
     const file = e.target.files[0];
@@ -94,22 +95,29 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
       <div className="mb-3">
         <div className="d-flex gap-3 mb-3">
           <Button 
+            variant={usarMapa ? 'primary' : 'outline-secondary'} 
+            size="sm"
+            onClick={() => setUsarMapa(true)}
+          >
+            🗺️ Mapa interactivo del CUCEI
+          </Button>
+          <Button 
             variant={!usarMapa ? 'primary' : 'outline-secondary'} 
             size="sm"
             onClick={() => setUsarMapa(false)}
           >
             📋 Lista de módulos
           </Button>
-          <Button 
-            variant={usarMapa ? 'primary' : 'outline-secondary'} 
-            size="sm"
-            onClick={() => setUsarMapa(true)}
-          >
-            🗺️ Seleccionar en mapa del campus
-          </Button>
         </div>
 
-        {!usarMapa ? (
+        {usarMapa ? (
+          <MapaImagenSelector 
+            ubicacionSeleccionada={ubicacion}
+            onUbicacionChange={handleUbicacionChange}
+            moduloSeleccionado={modulo}
+            onModuloChange={setModulo}
+          />
+        ) : (
           <div className="form-group">
             <label className="form-label">📍 Módulo / Ubicación:</label>
             <select
@@ -128,13 +136,6 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
               Total: {MODULOS.length} módulos disponibles
             </small>
           </div>
-        ) : (
-          <MapaImagenSelector 
-            ubicacionSeleccionada={ubicacion}
-            onUbicacionChange={handleUbicacionChange}
-            moduloSeleccionado={modulo}
-            onModuloChange={setModulo}
-          />
         )}
       </div>
       

@@ -11,8 +11,8 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
   // Módulos del CUCEI con coordenadas ajustadas al mapa
   const modulos = useMemo(() => [
     // Edificios principales (parte superior)
-    { id: 'A', nombre: 'Módulo A', x: 15, y: 25, descripcion: 'Edificio A' },
-    { id: 'B', nombre: 'Módulo B', x: 22, y: 28, descripcion: 'Edificio B' },
+    { id: 'A', nombre: 'Módulo A', x: 60, y: 80, descripcion: 'Edificio A' },
+    { id: 'B', nombre: 'Módulo B', x: 79, y: 76, descripcion: 'Edificio B' },
     { id: 'C', nombre: 'Módulo C', x: 29, y: 31, descripcion: 'Edificio C' },
     { id: 'D', nombre: 'Módulo D', x: 36, y: 34, descripcion: 'Edificio D' },
     { id: 'E', nombre: 'Módulo E', x: 43, y: 37, descripcion: 'Edificio E' },
@@ -41,7 +41,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
     // Zonas especiales
     { id: 'Z1', nombre: 'Z 1', x: 75, y: 35, descripcion: ' Modulo Z1' },
     { id: 'Z2', nombre: 'Z 2', x: 85, y: 40, descripcion: 'Estacionamiento 2' },
-    { id: 'V2', nombre: 'Vestíbulo 2', x: 45, y: 45, descripcion: 'Vestíbulo principal' },
+    { id: 'V2', nombre: 'pasillo M', x: 45, y: 45, descripcion: 'Vestíbulo principal' },
     { id: 'ALPHA', nombre: 'Alpha', x: 55, y: 50, descripcion: 'Edificio Alpha - Laboratorios' },
     { id: 'BETA', nombre: 'Beta', x: 65, y: 55, descripcion: 'Edificio Beta - Tecnología' },
     { id: 'L2', nombre: 'Laboratorio 2', x: 35, y: 60, descripcion: 'Laboratorio de Ingenierías' },
