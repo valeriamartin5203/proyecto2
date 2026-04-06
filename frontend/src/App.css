@@ -978,3 +978,62 @@ body {
     white-space: nowrap;
   }
 }
+
+/* Estilos para la leyenda del mapa */
+.mapa-leyenda {
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.mapa-leyenda-punto {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px #ccc;
+}
+
+/* Módulo seleccionado */
+.mapa-modulo-marcador.selected .mapa-modulo-punto {
+  background-color: #28a745;
+  transform: scale(1.3);
+  animation: pulse-selected 1s infinite;
+}
+
+.mapa-modulo-etiqueta {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1877f2;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  white-space: nowrap;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 30;
+  pointer-events: none;
+}
+
+.mapa-hover-desc {
+  font-size: 9px;
+  opacity: 0.8;
+  display: block;
+  text-align: center;
+}
+
+/* Responsive para la leyenda */
+@media (max-width: 768px) {
+  .mapa-leyenda {
+    font-size: 10px;
+  }
+  
+  .mapa-leyenda-punto {
+    width: 12px;
+    height: 12px;
+  }
+}
