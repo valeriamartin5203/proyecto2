@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Alert, Navbar, Nav, Button, Tab, Tabs, Spinner, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Alert, Navbar, Button, Tab, Tabs, Spinner, Badge } from 'react-bootstrap';
 import { Camera, List, Person, BoxArrowRight, CheckCircle, ExclamationTriangle, InfoCircle, House } from 'react-bootstrap-icons';
 import api from './services/api';
 import Login from './components/login';
@@ -16,7 +16,7 @@ function App() {
   const [serverStatus, setServerStatus] = useState('offline');
   const [activeTab, setActiveTab] = useState('login');
   const [cargandoReportes, setCargandoReportes] = useState(false);
-  const [activeSection, setActiveSection] = useState('inicio'); // Controla qué mostrar
+  const [activeSection, setActiveSection] = useState('inicio');
 
   useEffect(() => {
     verificarServidor();
@@ -96,7 +96,7 @@ function App() {
     );
   };
 
-  // Renderizar según la sección activa
+  // Renderizar según la sección activa (después de login)
   const renderContent = () => {
     switch(activeSection) {
       case 'inicio':
@@ -161,11 +161,12 @@ function App() {
     }
   };
 
-  // Si NO hay usuario logueado, mostrar login/registro
+  // ========== PANTALLA DE LOGIN/REGISTRO (CON IMAGEN LOCAL DE BIENVENIDA) ==========
   if (!usuario) {
     return (
       <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', minHeight: '100vh', padding: '20px 0' }}>
         <Container>
+          {/* Barra superior */}
           <Navbar bg="white" expand="lg" className="mb-4 rounded-3 shadow-sm">
             <Container fluid>
               <Navbar.Brand className="fw-bold text-primary">
@@ -175,18 +176,31 @@ function App() {
             </Container>
           </Navbar>
 
-          <div className="text-center text-white mb-5">
+          {/* ========== IMAGEN DE BIENVENIDA (LOCAL) ========== */}
+          <div className="text-center mb-4">
+            <img 
+              src="/Fondo/cucei.jpg" 
+              alt="Bienvenido a Reportes IA"
+              className="img-fluid"
+              style={{ maxHeight: '150px' }}
+            />
+          </div>
+
+          {/* Título */}
+          <div className="text-center text-white mb-4">
             <h1 className="display-4 fw-bold">📸 Sistema de Reportes con IA</h1>
             <p className="lead">Sube una imagen y la IA analizará el problema automáticamente</p>
           </div>
 
+          {/* Alertas */}
           <AlertMessage />
 
+          {/* Formulario de login/registro */}
           <Row className="justify-content-center">
             <Col lg={6} md={8}>
               <Card className="shadow-sm border-0">
                 <Card.Body>
-                  <Card.Title className="mb-4">
+                  <Card.Title className="mb-4 text-center">
                     <Person className="me-2 text-primary" /> Acceso al Sistema
                   </Card.Title>
                   <Tabs
@@ -206,12 +220,17 @@ function App() {
               </Card>
             </Col>
           </Row>
+
+          {/* Footer */}
+          <footer className="text-center text-white mt-5 pt-3">
+            <small>© 2026 Reportes IA - Todos los derechos reservados</small>
+          </footer>
         </Container>
       </div>
     );
   }
 
-  // Si HAY usuario logueado, mostrar con menú lateral
+  // ========== PANTALLA PRINCIPAL (CON MENÚ LATERAL) ==========
   return (
     <div style={{ background: '#f0f2f5', minHeight: '100vh' }}>
       {/* Barra superior */}
@@ -227,8 +246,10 @@ function App() {
         </Container>
       </Navbar>
 
+      {/* Alertas */}
       <AlertMessage />
 
+      {/* Contenido principal con menú lateral */}
       <Container fluid>
         <Row>
           {/* Menú lateral */}
@@ -239,7 +260,7 @@ function App() {
             onLogout={handleLogout}
           />
 
-          {/* Contenido principal */}
+          {/* Contenido dinámico */}
           <Col md={9} className="p-4">
             {renderContent()}
             <footer className="text-center text-muted mt-5 pt-3">
