@@ -150,7 +150,11 @@ function App() {
                   <p className="mt-3 text-muted">Cargando reportes...</p>
                 </div>
               ) : (
-                <ReportesList reportes={reportes} usuarioActual={usuario} />
+                <ReportesList 
+                  reportes={reportes} 
+                  usuarioActual={usuario}
+                  onReporteEliminado={cargarReportes}
+                />
               )}
             </Card.Body>
           </Card>

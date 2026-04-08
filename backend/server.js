@@ -48,7 +48,7 @@ db.serialize(() => {
         problema TEXT NOT NULL,
         categoria TEXT NOT NULL,
         urgencia TEXT NOT NULL,
-        imagen TEXT,  -- Aquí se guardará la URL de Cloudinary
+        imagen TEXT,
         fecha DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 });
@@ -120,7 +120,7 @@ app.post("/login", (req, res) => {
     });
 });
 
-// ========== CREAR REPORTE CON GEMINI + CLOUDINARY ==========
+// ========== CREAR REPORTE CON GEMINI + CLOUDINARY (IA MÁS CRÍTICA) ==========
 app.post("/reportes", upload.single("imagen"), async (req, res) => {
     try {
         // 1. Validar que llegue la imagen
@@ -130,7 +130,7 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
 
         const { usuario, modulo } = req.body;
         if (!usuario || !modulo) {
-            return res.status(400).json({ mensaje: "Faltan datos", success: false });
+            return res.status(400).json({ mensaje: "Faltan datos: usuario y ubicación", success: false });
         }
 
         // 2. Verificar usuario
@@ -145,10 +145,29 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         const imageBuffer = req.file.buffer;
         const base64Image = imageBuffer.toString("base64");
 
-        // 4. Analizar imagen con Gemini
-        const prompt = `Analiza esta imagen y responde SOLO con JSON:
-        {"problema":"descripción","categoria":"Infraestructura/Limpieza/Seguridad/Tecnología/Servicios","urgencia":"Baja/Media/Alta"}`;
+        // 4. Analizar imagen con Gemini (PROMPT MEJORADO PARA SER MÁS CRÍTICO)
+        const prompt = `Eres un experto en seguridad y mantenimiento. Analiza esta imagen y responde SOLO con JSON.
 
+REGLAS ESTRICTAS PARA LA URGENCIA:
+- ALTA: Situación de PELIGRO INMEDIATO (fuego, agua淹, humo, cables expuestos, riesgo de caída, estructuras colapsando, personas en riesgo)
+- ALTA: Daños ESTRUCTURALES GRAVES (paredes con grietas grandes, techos hundidos, columnas dañadas)
+- MEDIA: Problemas que afectan el funcionamiento diario pero SIN RIESGO DE VIDA (equipo roto, goteras menores, falta de suministros)
+- BAJA: Problemas estéticos o menores sin impacto en seguridad (pintura descascarada, basura ligera, detalles estéticos)
+
+REGLAS PARA CATEGORÍA:
+- Infraestructura: Daños estructurales, instalaciones fijas
+- Limpieza: Basura, suciedad, malos olores
+- Seguridad: Riesgos para personas (solo si hay PELIGRO REAL)
+- Tecnología: Equipos electrónicos dañados
+- Servicios: Problemas de suministro (agua, luz, gas)
+
+Responde con:
+{"problema":"descripción clara y específica","categoria":"Infraestructura/Limpieza/Seguridad/Tecnología/Servicios","urgencia":"Baja/Media/Alta"}
+
+NO USES "Alta" si no hay peligro real. Sé CRÍTICO.`;
+
+        console.log("🤖 Enviando a Gemini para análisis crítico...");
+        
         const result = await model.generateContent([
             prompt,
             { inlineData: { data: base64Image, mimeType: req.file.mimetype } }
@@ -163,8 +182,23 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
         try {
             datos = JSON.parse(cleanJson);
         } catch {
-            datos = { problema: "Problema detectado", categoria: "Infraestructura", urgencia: "Media" };
+            datos = { 
+                problema: "Problema detectado en la imagen", 
+                categoria: "Infraestructura", 
+                urgencia: "Media" 
+            };
         }
+
+        // Validación adicional para evitar "Alta" innecesaria
+        if (datos.urgencia === "Alta" && !datos.problema.toLowerCase().includes("peligro") && 
+            !datos.problema.toLowerCase().includes("riesgo") && !datos.problema.toLowerCase().includes("fuego") &&
+            !datos.problema.toLowerCase().includes("grieta") && !datos.problema.toLowerCase().includes("caída") &&
+            !datos.problema.toLowerCase().includes("expuestos")) {
+            datos.urgencia = "Media";
+            console.log("⚠️ Urgencia reducida de Alta a Media (sin peligro real detectado)");
+        }
+
+        console.log(`📊 Análisis final - Problema: ${datos.problema}, Categoría: ${datos.categoria}, Urgencia: ${datos.urgencia}`);
 
         // 5. Subir imagen a Cloudinary
         const uploadResult = await new Promise((resolve, reject) => {
@@ -178,9 +212,9 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
             stream.end(imageBuffer);
         });
 
-        const imagenUrl = uploadResult.secure_url;  // URL pública de Cloudinary
+        const imagenUrl = uploadResult.secure_url;
 
-        // 6. Guardar reporte en base de datos (guardamos la URL)
+        // 6. Guardar reporte en base de datos
         db.run(
             `INSERT INTO reportes (usuario, modulo, problema, categoria, urgencia, imagen) VALUES (?, ?, ?, ?, ?, ?)`,
             [usuario, modulo, datos.problema, datos.categoria, datos.urgencia, imagenUrl],
@@ -189,6 +223,7 @@ app.post("/reportes", upload.single("imagen"), async (req, res) => {
                     console.error("Error BD:", err);
                     return res.status(500).json({ mensaje: "Error guardando", success: false });
                 }
+                console.log(`✅ Reporte guardado con ID: ${this.lastID} - Urgencia: ${datos.urgencia}`);
                 res.json({
                     mensaje: "Reporte guardado",
                     success: true,
@@ -355,7 +390,6 @@ app.get("/api/debug/ultimo-reporte", (req, res) => {
 });
 
 // ========== RESPUESTAS A COMENTARIOS ==========
-// Tabla de respuestas
 db.run(`
     CREATE TABLE IF NOT EXISTS respuestas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -371,7 +405,6 @@ db.run(`
     else console.log("✅ Tabla 'respuestas' lista");
 });
 
-// Obtener respuestas de un comentario
 app.get("/api/respuestas/:comentarioId", (req, res) => {
     const { comentarioId } = req.params;
     db.all(
@@ -384,7 +417,6 @@ app.get("/api/respuestas/:comentarioId", (req, res) => {
     );
 });
 
-// Agregar respuesta a un comentario
 app.post("/api/respuestas", (req, res) => {
     const { comentarioId, usuario, texto } = req.body;
 
@@ -413,7 +445,6 @@ app.post("/api/respuestas", (req, res) => {
     );
 });
 
-// Dar like a una respuesta
 app.post("/api/respuestas/:id/like", (req, res) => {
     const { id } = req.params;
     db.run("UPDATE respuestas SET likes = likes + 1 WHERE id = ?", [id], function(err) {
@@ -422,7 +453,7 @@ app.post("/api/respuestas/:id/like", (req, res) => {
     });
 });
 
-// Eliminar un reporte (y sus comentarios/likes por CASCADE)
+// ========== ELIMINAR REPORTE ==========
 app.delete("/api/reportes/:id", (req, res) => {
     const { id } = req.params;
     
@@ -438,10 +469,9 @@ app.delete("/api/reportes/:id", (req, res) => {
     });
 });
 
-
-
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`\n🚀 Backend en puerto ${PORT}`);
     console.log(`🔗 Frontend permitido: ${FRONTEND_URL}`);
+    console.log(`🤖 Gemini configurado con modo CRÍTICO para evaluación de urgencia`);
 });
