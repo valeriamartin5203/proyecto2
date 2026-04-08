@@ -422,6 +422,22 @@ app.post("/api/respuestas/:id/like", (req, res) => {
     });
 });
 
+// Eliminar un reporte (y sus comentarios/likes por CASCADE)
+app.delete("/api/reportes/:id", (req, res) => {
+    const { id } = req.params;
+    
+    db.run("DELETE FROM reportes WHERE id = ?", [id], function(err) {
+        if (err) {
+            console.error("Error al eliminar reporte:", err);
+            return res.status(500).json({ mensaje: "Error al eliminar reporte", success: false });
+        }
+        if (this.changes === 0) {
+            return res.status(404).json({ mensaje: "Reporte no encontrado", success: false });
+        }
+        res.json({ mensaje: "Reporte eliminado correctamente", success: true });
+    });
+});
+
 
 
 const PORT = process.env.PORT || 10000;
