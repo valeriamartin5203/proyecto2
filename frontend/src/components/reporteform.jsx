@@ -4,24 +4,12 @@ import { Camera } from 'react-bootstrap-icons';
 import api from '../services/api';
 import MapaImagenSelector from './MapaImagenSelector';
 
-// Lista de módulos respaldo (por si no se usa el mapa)
-const MODULOS = [
-  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-  "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-  "U", "V", "W", "X", "Y", "Z",
-  "Z1", "Z2", "V2", "ALPHA", "BETA", "L2", "JOBS", "santander", "lona",
-  "zona de alimentos del p", "zona de alimentos del x", "zona de alimentos del t", 
-  "zona de alimentos del j", "baños del e,i,alpha,beta,p,q,r,t,v,x,z1,z,y",
-  "laboratorio de ingenieria"
-].sort();
-
 function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
   const [modulo, setModulo] = useState('');
   const [ubicacion, setUbicacion] = useState(null);
   const [imagen, setImagen] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [usarMapa, setUsarMapa] = useState(true); // Por defecto usar mapa
 
   const handleImagenChange = (e) => {
     const file = e.target.files[0];
@@ -46,7 +34,7 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
     e.preventDefault();
     
     if (!modulo) {
-      mostrarAlerta('Selecciona una ubicación', 'error');
+      mostrarAlerta('Selecciona una ubicación en el mapa', 'error');
       return;
     }
 
@@ -93,50 +81,13 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
   return (
     <Form onSubmit={handleSubmit}>
       <div className="mb-3">
-        <div className="d-flex gap-3 mb-3">
-          <Button 
-            variant={usarMapa ? 'primary' : 'outline-secondary'} 
-            size="sm"
-            onClick={() => setUsarMapa(true)}
-          >
-            🗺️ Mapa interactivo del CUCEI
-          </Button>
-          <Button 
-            variant={!usarMapa ? 'primary' : 'outline-secondary'} 
-            size="sm"
-            onClick={() => setUsarMapa(false)}
-          >
-            📋 Lista de módulos
-          </Button>
-        </div>
-
-        {usarMapa ? (
-          <MapaImagenSelector 
-            ubicacionSeleccionada={ubicacion}
-            onUbicacionChange={handleUbicacionChange}
-            moduloSeleccionado={modulo}
-            onModuloChange={setModulo}
-          />
-        ) : (
-          <div className="form-group">
-            <label className="form-label">📍 Módulo / Ubicación:</label>
-            <select
-              className="form-select"
-              value={modulo}
-              onChange={(e) => setModulo(e.target.value)}
-              disabled={loading}
-              size="8"
-            >
-              <option value="">-- Selecciona un módulo --</option>
-              {MODULOS.map((mod) => (
-                <option key={mod} value={mod}>{mod}</option>
-              ))}
-            </select>
-            <small className="text-muted">
-              Total: {MODULOS.length} módulos disponibles
-            </small>
-          </div>
-        )}
+        <label className="form-label fw-bold">🗺️ Selecciona una ubicación en el mapa:</label>
+        <MapaImagenSelector 
+          ubicacionSeleccionada={ubicacion}
+          onUbicacionChange={handleUbicacionChange}
+          moduloSeleccionado={modulo}
+          onModuloChange={setModulo}
+        />
       </div>
       
       <div className="form-group">

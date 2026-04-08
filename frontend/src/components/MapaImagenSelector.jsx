@@ -10,69 +10,65 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
 
   // Módulos del CUCEI con coordenadas ajustadas al mapa
   const modulos = useMemo(() => [
-    // Edificios principales (parte superior)
-    { id: 'A', nombre: 'Módulo A', x: 60, y: 80, descripcion: 'Edificio A' },
-    { id: 'B', nombre: 'Módulo B', x: 79, y: 76, descripcion: 'Edificio B' },
-    { id: 'C', nombre: 'Módulo C', x: 29, y: 31, descripcion: 'Edificio C' },
-    { id: 'D', nombre: 'Módulo D', x: 36, y: 34, descripcion: 'Edificio D' },
-    { id: 'E', nombre: 'Módulo E', x: 43, y: 37, descripcion: 'Edificio E' },
-    { id: 'F', nombre: 'Módulo F', x: 50, y: 40, descripcion: 'Edificio F' },
-    { id: 'G', nombre: 'Módulo G', x: 57, y: 43, descripcion: 'Edificio G' },
-    { id: 'H', nombre: 'Módulo H', x: 64, y: 46, descripcion: 'Edificio H' },
-    { id: 'I', nombre: 'Módulo I', x: 71, y: 49, descripcion: 'Edificio I' },
-    { id: 'J', nombre: 'Módulo J', x: 78, y: 52, descripcion: 'Edificio J' },
-    { id: 'K', nombre: 'Módulo K', x: 85, y: 55, descripcion: 'Edificio K' },
-    { id: 'L', nombre: 'Módulo L', x: 20, y: 60, descripcion: 'Edificio L' },
-    { id: 'M', nombre: 'Módulo M', x: 30, y: 65, descripcion: 'Edificio M' },
-    { id: 'N', nombre: 'Módulo N', x: 40, y: 70, descripcion: 'Edificio N' },
-    { id: 'O', nombre: 'Módulo O', x: 50, y: 75, descripcion: 'Edificio O' },
-    { id: 'P', nombre: 'Módulo P', x: 60, y: 80, descripcion: 'Edificio P' },
-    { id: 'Q', nombre: 'Módulo Q', x: 70, y: 85, descripcion: 'Edificio Q' },
-    { id: 'R', nombre: 'Módulo R', x: 80, y: 90, descripcion: 'Edificio R' },
-    { id: 'S', nombre: 'Módulo S', x: 10, y: 35, descripcion: 'Servicios Escolares' },
-    { id: 'T', nombre: 'Módulo T', x: 18, y: 42, descripcion: 'Control Escolar' },
-    { id: 'U', nombre: 'Módulo U', x: 26, y: 49, descripcion: 'Unidad de Posgrado' },
-    { id: 'V', nombre: 'Módulo V', x: 34, y: 56, descripcion: 'Vinculación' },
-    { id: 'W', nombre: 'Módulo W', x: 42, y: 63, descripcion: 'Idiomas' },
-    { id: 'X', nombre: 'Módulo X', x: 50, y: 20, descripcion: 'Área de Gobierno' },
-    { id: 'Y', nombre: 'Módulo Y', x: 58, y: 25, descripcion: 'Rectoría' },
-    { id: 'Z', nombre: 'Módulo Z', x: 66, y: 30, descripcion: 'Planeación' },
+    // Edificios principales
+    { id: 'A', nombre: 'Módulo A', x: 56, y: 77, descripcion: 'Edificio A' },
+    { id: 'B', nombre: 'Módulo B', x: 74, y: 78, descripcion: 'Edificio B' },
+    { id: 'C', nombre: 'Módulo C', x: 71, y: 75, descripcion: 'Edificio C' },
+    { id: 'D', nombre: 'Módulo D', x: 66, y: 72, descripcion: 'Edificio D' },
+    { id: 'biblioteca', nombre: 'Biblioteca', x: 63, y: 67, descripcion: 'Biblioteca Central' },
+    { id: 'E', nombre: 'Módulo E', x: 52, y: 57, descripcion: 'Edificio E' },
+    { id: 'F', nombre: 'Módulo F', x: 52, y: 53, descripcion: 'Edificio F' },
+    { id: 'G', nombre: 'Módulo G', x: 30, y: 53, descripcion: 'Edificio G' },
+    { id: 'H', nombre: 'Módulo H', x: 42, y: 51, descripcion: 'Edificio H' },
+    { id: 'I', nombre: 'Módulo I', x: 59, y: 51, descripcion: 'Edificio I' },
+    { id: 'J', nombre: 'Módulo J', x: 51, y: 48, descripcion: 'Edificio J' },
+    { id: 'K', nombre: 'Módulo K', x: 49, y: 46, descripcion: 'Edificio K' },
+    { id: 'L', nombre: 'Módulo L', x: 67, y: 41, descripcion: 'Edificio L' },
+    { id: 'M', nombre: 'Módulo M', x: 46, y: 43, descripcion: 'Edificio M' },
+    { id: 'N', nombre: 'Módulo N', x: 46, y: 39, descripcion: 'Edificio N' },
+    { id: 'O', nombre: 'Módulo O', x: 44, y: 34, descripcion: 'Edificio O' },
+    { id: 'P', nombre: 'Módulo P', x: 63, y: 34, descripcion: 'Edificio P' },
+    { id: 'Q', nombre: 'Módulo Q', x: 72, y: 30, descripcion: 'Edificio Q' },
+    { id: 'R', nombre: 'Módulo R', x: 58, y: 29, descripcion: 'Edificio R' },
+    { id: 'S', nombre: 'Módulo S', x: 44, y: 30, descripcion: 'Edificio S' },
+    { id: 'T', nombre: 'Módulo T', x: 62, y: 26, descripcion: 'Edificio T' },
+    { id: 'U', nombre: 'Módulo U', x: 61, y: 23, descripcion: 'Edificio U' },
+    { id: 'V', nombre: 'Módulo V', x: 43, y: 21, descripcion: 'Edificio V' },
+    { id: 'V2', nombre: 'Módulo V2', x: 44, y: 24, descripcion: 'Edificio V2' },
+    { id: 'W', nombre: 'Módulo W', x: 30, y: 24, descripcion: 'Edificio W' },
+    { id: 'X', nombre: 'Módulo X', x: 30, y: 21, descripcion: 'Edificio X' },
+    { id: 'Y', nombre: 'Módulo Y', x: 22, y: 35, descripcion: 'Edificio Y' },
+    { id: 'Z', nombre: 'Módulo Z', x: 13, y: 35, descripcion: 'Edificio Z' },
+    { id: 'Z1', nombre: 'Módulo Z1', x: 10, y: 34, descripcion: 'Edificio Z1' },
+    { id: 'Z2', nombre: 'Módulo Z2', x: 18, y: 30, descripcion: 'Edificio Z2' },
+    { id: 'ALPHA', nombre: 'Alpha', x: 66, y: 46, descripcion: 'Edificio Alpha' },
+    { id: 'BETA', nombre: 'Beta', x: 67, y: 48, descripcion: 'Edificio Beta' },
+    { id: 'Pasillo Alpha y beta', nombre: 'Pasillo Alpha y beta', x: 67, y: 47, descripcion: 'Pasillo Alpha y beta' },
+    { id: 'lona', nombre: 'Lona', x: 20, y: 32, descripcion: 'Área de la Lona - Eventos' },
     
+
     // Zonas especiales
-    { id: 'Z1', nombre: 'Z 1', x: 75, y: 35, descripcion: ' Modulo Z1' },
-    { id: 'Z2', nombre: 'Z 2', x: 85, y: 40, descripcion: 'Estacionamiento 2' },
-    { id: 'V2', nombre: 'pasillo M', x: 45, y: 45, descripcion: 'Vestíbulo principal' },
-    { id: 'ALPHA', nombre: 'Alpha', x: 55, y: 50, descripcion: 'Edificio Alpha - Laboratorios' },
-    { id: 'BETA', nombre: 'Beta', x: 65, y: 55, descripcion: 'Edificio Beta - Tecnología' },
-    { id: 'L2', nombre: 'Laboratorio 2', x: 35, y: 60, descripcion: 'Laboratorio de Ingenierías' },
-    { id: 'JOBS', nombre: 'JOBS', x: 25, y: 65, descripcion: 'Bolsa de trabajo' },
-    { id: 'santander', nombre: 'Santander', x: 15, y: 70, descripcion: 'Cajero Santander' },
-    { id: 'lona', nombre: 'Lona', x: 5, y: 75, descripcion: 'Área de la Lona - Eventos' },
+    { id: 'Z1', nombre: 'Z 1', x: 0, y: 0, descripcion: 'Módulo Z1' },
+    { id: 'Z2', nombre: 'Z 2', x: 0, y: 0, descripcion: 'Estacionamiento 2' },
+    { id: 'V2', nombre: 'Pasillo M', x: 0, y: 0, descripcion: 'Vestíbulo principal' },
+    { id: 'ALPHA', nombre: 'Alpha', x: 0, y: 0, descripcion: 'Edificio Alpha - Laboratorios' },
+    { id: 'BETA', nombre: 'Beta', x: 0, y: 0, descripcion: 'Edificio Beta - Tecnología' },
+    { id: 'L2', nombre: 'Laboratorio 2', x: 0, y: 0, descripcion: 'Laboratorio de Ingenierías' },
+    { id: 'JOBS', nombre: 'JOBS', x: 0, y: 0, descripcion: 'Bolsa de trabajo' },
+    { id: 'santander', nombre: 'Santander', x: 0, y: 0, descripcion: 'Cajero Santander' },
+    { id: 'lona', nombre: 'Lona', x: 0, y: 0, descripcion: 'Área de la Lona - Eventos' },
     
     // Zonas de alimentos
-    { id: 'zona_alimentos_p', nombre: 'Zona Alimentos P', x: 12, y: 80, descripcion: 'Cafetería P' },
-    { id: 'zona_alimentos_x', nombre: 'Zona Alimentos X', x: 22, y: 85, descripcion: 'Comida rápida' },
-    { id: 'zona_alimentos_t', nombre: 'Zona Alimentos T', x: 32, y: 90, descripcion: 'Tortas y snacks' },
-    { id: 'zona_alimentos_j', nombre: 'Zona Alimentos J', x: 42, y: 95, descripcion: 'Jugos y frutas' },
-    
-    // Servicios
-    { id: 'baños', nombre: 'Baños', x: 48, y: 98, descripcion: 'Sanitarios generales' },
-    { id: 'laboratorio_ingenieria', nombre: 'Lab. Ingeniería', x: 38, y: 55, descripcion: 'Laboratorio de Ingenierías' },
-    { id: 'biblioteca', nombre: 'Biblioteca', x: 52, y: 52, descripcion: 'Biblioteca Central' },
-    { id: 'auditorios', nombre: 'Auditorios', x: 62, y: 48, descripcion: 'Auditorio principal' },
-    { id: 'medico', nombre: 'Médico', x: 72, y: 44, descripcion: 'Servicio médico' },
-    { id: 'servicios_generales', nombre: 'Servicios Generales', x: 82, y: 40, descripcion: 'Mantenimiento' },
-    { id: 'papeleria', nombre: 'Papelería', x: 28, y: 35, descripcion: 'Papelería' },
-    { id: 'cafeteria', nombre: 'Cafetería', x: 18, y: 30, descripcion: 'Cafetería central' },
-    { id: 'linea3', nombre: 'Línea 3', x: 8, y: 25, descripcion: 'Estación Línea 3' },
-    { id: 'cid', nombre: 'CID', x: 48, y: 28, descripcion: 'Centro de Investigación' },
-    { id: 'jardines', nombre: 'Jardines', x: 58, y: 22, descripcion: 'Áreas verdes' },
-    { id: 'explanadas', nombre: 'Explanadas', x: 68, y: 18, descripcion: 'Zonas de esparcimiento' },
-    
+    { id: 'zona_alimentos_p', nombre: 'Zona Alimentos P', x: 0, y: 0, descripcion: 'Cafetería P' },
+    { id: 'zona_alimentos_x', nombre: 'Zona Alimentos X', x: 36, y: 14, descripcion: 'Comida rápida' },
+    { id: 'zona_alimentos_t', nombre: 'Zona Alimentos T', x: 0, y: 0, descripcion: 'Tortas y snacks' },
+    { id: 'zona_alimentos_j', nombre: 'Zona Alimentos J', x: 0, y: 0, descripcion: 'Jugos y frutas' },
+    { id: 'laboratorio_ingenieria', nombre: 'Lab. Ingeniería', x: 80, y: 25, descripcion: 'Laboratorio de Ingenierías / TITANIC' },
+    { id: 'MATUTE', nombre: 'MATUTE', x: 57, y: 40, descripcion: 'MATUTE' },    
     // Accesos
-    { id: 'acceso_principal', nombre: 'Acceso Principal', x: 50, y: 10, descripcion: 'Registro facial - Entrada principal' },
-    { id: 'acceso_secundario', nombre: 'Acceso Secundario', x: 80, y: 15, descripcion: 'Entrada por Calzada' },
-    { id: 'acceso_revolucion', nombre: 'Acceso Revolución', x: 10, y: 5, descripcion: 'Entrada por Calz. Revolución' }
+    { id: 'acceso_principal', nombre: 'Acceso Principal', x: 0, y: 0, descripcion: 'Registro facial - Entrada principal' },
+    { id: 'acceso_secundario', nombre: 'Acceso Secundario', x: 0, y: 0, descripcion: 'Entrada por Calzada' },
+    { id: 'acceso_revolucion', nombre: 'Acceso Revolución', x: 85, y: 12, descripcion: 'Entrada por Calz. Revolución' }
   ], []);
 
   // Filtrar módulos
@@ -110,7 +106,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
     
     setCoordenadasImagen({ x, y });
     
-    // Buscar módulo más cercano
+    // Buscar módulo más cercano (distancia máxima 8%)
     let moduloCercano = null;
     let distanciaMinima = 8;
     for (const modulo of modulos) {
@@ -122,6 +118,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
     }
     
     if (moduloCercano) {
+      // Si hay un módulo cercano, seleccionarlo
       onModuloChange(moduloCercano.nombre);
       onUbicacionChange({
         x: moduloCercano.x,
@@ -131,11 +128,18 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
       });
       setCoordenadasImagen({ x: moduloCercano.x, y: moduloCercano.y });
     } else {
-      onModuloChange(`Ubicación personalizada`);
+      // Si no hay módulo cercano, crear ubicación personalizada con coordenadas X e Y
+      const xRedondeado = Math.round(x);
+      const yRedondeado = Math.round(y);
+      const ubicacionPersonalizada = `X:${xRedondeado}% Y:${yRedondeado}%`;
+      
+      onModuloChange(ubicacionPersonalizada);
       onUbicacionChange({
         x, y,
-        direccion: `Ubicación personalizada`,
+        direccion: ubicacionPersonalizada,
+        descripcion: `Coordenadas en el mapa`
       });
+      setCoordenadasImagen({ x, y });
     }
   };
 
@@ -217,7 +221,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                 ))}
               </div>
               
-              {/* Punto de hover */}
+              {/* Punto de hover (amarillo) */}
               {hoverCoords.mostrar && (
                 <div 
                   className="mapa-hover"
@@ -230,7 +234,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
                 </div>
               )}
               
-              {/* Marcador seleccionado */}
+              {/* Marcador seleccionado (rojo) */}
               {coordenadasImagen.x && coordenadasImagen.y && (
                 <div 
                   className="mapa-marcador"
@@ -262,7 +266,7 @@ function MapaImagenSelector({ ubicacionSeleccionada, onUbicacionChange, moduloSe
               </div>
             </div>
 
-            {/* Leyenda */}
+            {/* Leyenda de colores */}
             <div className="mapa-leyenda mt-2">
               <div className="d-flex gap-4 flex-wrap justify-content-center">
                 <div className="d-flex align-items-center gap-2">
