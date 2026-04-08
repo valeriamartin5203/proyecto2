@@ -26,19 +26,28 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
   };
 
   const handleUbicacionChange = (ubicacionData) => {
+    console.log('📍 Ubicación seleccionada:', ubicacionData);
     setUbicacion(ubicacionData);
     setModulo(ubicacionData.direccion);
+    console.log('📛 Módulo actualizado a:', ubicacionData.direccion);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('🔍 Validando formulario...');
+    console.log('- Módulo:', modulo);
+    console.log('- Usuario:', usuario);
+    console.log('- Imagen:', imagen?.name || 'No seleccionada');
+    
     if (!modulo) {
+      console.error('❌ Error: No hay módulo seleccionado');
       mostrarAlerta('Selecciona una ubicación en el mapa', 'error');
       return;
     }
 
     if (!imagen) {
+      console.error('❌ Error: No hay imagen seleccionada');
       mostrarAlerta('Selecciona una imagen', 'error');
       return;
     }
@@ -54,11 +63,19 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
       formData.append('x', ubicacion.x);
       formData.append('y', ubicacion.y);
     }
+    
+    // Debug: Ver qué se está enviando
+    console.log('📤 Enviando datos:');
+    for (let pair of formData.entries()) {
+      console.log(`   ${pair[0]}: ${pair[0] === 'imagen' ? pair[1].name : pair[1]}`);
+    }
 
     try {
       const response = await api.post('/reportes', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
+      console.log('✅ Respuesta del servidor:', response.data);
 
       if (response.data.success) {
         mostrarAlerta('✅ Reporte creado con éxito', 'success');
@@ -72,7 +89,13 @@ function ReporteForm({ usuario, onReporteCreado, mostrarAlerta }) {
         mostrarAlerta(response.data.mensaje, 'error');
       }
     } catch (error) {
-      mostrarAlerta('Error al crear reporte', 'error');
+      console.error('❌ Error completo:', error);
+      console.error('❌ Response error:', error.response);
+      console.error('❌ Response data:', error.response?.data);
+      console.error('❌ Response status:', error.response?.status);
+      
+      const mensajeError = error.response?.data?.mensaje || error.response?.data?.error || 'Error al crear reporte';
+      mostrarAlerta(mensajeError, 'error');
     } finally {
       setLoading(false);
     }
