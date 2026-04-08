@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Dropdown, Button, Modal, Form, InputGroup, Spinner } from 'react-bootstrap';
-import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Check2, Facebook, Twitter, Envelope, Eye, Reply } from 'react-bootstrap-icons';
+import { Person, Chat, Share, ThreeDots, Heart, HeartFill, Send, Link45deg, Check2, Facebook, Twitter, Envelope, Eye, Reply, Trash } from 'react-bootstrap-icons';
 import api from '../services/api';
 import Confetti from './Confetti';
 
@@ -34,7 +34,7 @@ function ReporteImagen({ imagen, problema, onClick }) {
   );
 }
 
-function ReportesList({ reportes, usuarioActual }) {
+function ReportesList({ reportes, usuarioActual, onReporteEliminado }) {
   // Estados para likes
   const [likes, setLikes] = useState({});
   const [liked, setLiked] = useState({});
@@ -59,6 +59,10 @@ function ReportesList({ reportes, usuarioActual }) {
   const [copied, setCopied] = useState({});
   const [showImageModal, setShowImageModal] = useState({});
   const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
+  
+  // Estado para confirmar eliminación
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [reporteAEliminar, setReporteAEliminar] = useState(null);
 
   // Cargar likes
   useEffect(() => {
@@ -236,6 +240,7 @@ function ReportesList({ reportes, usuarioActual }) {
 
   // Compartir
   const handleToggleShare = (id) => setShowShare(prev => ({ ...prev, [id]: !prev[id] }));
+  
   const handleCopyLink = async (reporteId) => {
     const link = `${window.location.origin}/reporte/${reporteId}`;
     try {
@@ -244,9 +249,39 @@ function ReportesList({ reportes, usuarioActual }) {
       setTimeout(() => setCopied(prev => ({ ...prev, [reporteId]: false })), 2000);
     } catch (err) { console.error('Error:', err); }
   };
+  
   const handleShareToFacebook = (reporteId) => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/reporte/${reporteId}`)}`, '_blank');
   const handleShareToTwitter = (reporteId, reporte) => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`📸 Reporte: ${reporte?.problema?.substring(0, 100)}`)}&url=${encodeURIComponent(`${window.location.origin}/reporte/${reporteId}`)}`, '_blank');
   const handleShareToEmail = (reporteId, reporte) => window.location.href = `mailto:?subject=${encodeURIComponent(`Reporte #${reporteId}`)}&body=${encodeURIComponent(`Hola,\n\nTe comparto este reporte:\n\nProblema: ${reporte?.problema}\nUbicación: ${reporte?.modulo}\nUrgencia: ${reporte?.urgencia}\n\nVer más en: ${window.location.origin}/reporte/${reporteId}`)}`;
+
+  // Eliminar reporte
+  const handleEliminarClick = (reporte) => {
+    setReporteAEliminar(reporte);
+    setShowDeleteModal(true);
+  };
+
+  const confirmarEliminar = async () => {
+    if (!reporteAEliminar) return;
+    
+    try {
+      // Eliminar el reporte (también eliminará comentarios y likes por CASCADE)
+      await api.delete(`/api/reportes/${reporteAEliminar.id}`);
+      
+      // Mostrar mensaje de éxito
+      alert('✅ Reporte eliminado correctamente');
+      
+      // Recargar la lista de reportes
+      if (onReporteEliminado) {
+        onReporteEliminado();
+      }
+    } catch (error) {
+      console.error('Error al eliminar reporte:', error);
+      alert('❌ Error al eliminar el reporte');
+    } finally {
+      setShowDeleteModal(false);
+      setReporteAEliminar(null);
+    }
+  };
 
   const handleVerImagen = (reporte) => {
     setImagenSeleccionada(reporte);
@@ -319,14 +354,18 @@ function ReportesList({ reportes, usuarioActual }) {
                   </div>
                 </div>
               </div>
-              <Dropdown>
-                <Dropdown.Toggle as={Button} variant="link" className="text-dark p-1"><ThreeDots /></Dropdown.Toggle>
-                <Dropdown.Menu align="end">
-                  <Dropdown.Item>Guardar reporte</Dropdown.Item>
-                  <Dropdown.Divider />
-                  <Dropdown.Item className="text-danger">Eliminar</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
+              
+              {/* Solo mostrar el menú si el usuario es el dueño del reporte */}
+              {usuarioActual === reporte.usuario && (
+                <Dropdown>
+                  <Dropdown.Toggle as={Button} variant="link" className="text-dark p-1"><ThreeDots /></Dropdown.Toggle>
+                  <Dropdown.Menu align="end">
+                    <Dropdown.Item onClick={() => handleEliminarClick(reporte)} className="text-danger">
+                      <Trash className="me-2" /> Eliminar reporte
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              )}
             </div>
           </Card.Body>
 
@@ -480,6 +519,26 @@ function ReportesList({ reportes, usuarioActual }) {
           <img src={imagenSeleccionada?.imagen} alt="Evidencia" className="img-fluid rounded-3" style={{ maxHeight: '70vh', objectFit: 'contain' }} onError={(e) => e.target.src = 'https://via.placeholder.com/800x600?text=Imagen+no+disponible'} />
           <div className="mt-3 text-start"><p><strong>Problema:</strong> {imagenSeleccionada?.problema}</p><p><strong>Urgencia:</strong> {imagenSeleccionada?.urgencia}</p><p><strong>Categoría:</strong> {imagenSeleccionada?.categoria}</p></div>
         </Modal.Body>
+      </Modal>
+
+      {/* Modal para confirmar eliminación */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="text-danger">⚠️ Eliminar reporte</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="pt-0">
+          <p>¿Estás seguro de que quieres eliminar este reporte?</p>
+          <p className="text-muted small">Esta acción no se puede deshacer y eliminará también todos los comentarios y likes asociados.</p>
+          {reporteAEliminar && (
+            <div className="bg-light p-2 rounded-3 mt-2">
+              <small><strong>Reporte:</strong> {reporteAEliminar.problema?.substring(0, 100)}</small>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</Button>
+          <Button variant="danger" onClick={confirmarEliminar}>Eliminar</Button>
+        </Modal.Footer>
       </Modal>
     </div>
   );
